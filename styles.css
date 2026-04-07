@@ -1264,3 +1264,141 @@ a:hover {
         grid-template-columns: 1fr;
     }
 }
+
+/* ==================== NOTES MODAL ==================== */
+.notes-link {
+    color: var(--text-primary);
+    text-decoration: underline;
+    cursor: pointer;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.notes-link:hover {
+    color: var(--accent-red);
+}
+
+.notes-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+}
+
+.notes-modal.active {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.notes-modal-content {
+    background-color: var(--bg-panel);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    width: 90%;
+    max-width: 700px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 20px var(--shadow);
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.notes-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.notes-modal-header h2 {
+    color: var(--text-primary);
+    font-size: 1.4rem;
+    margin: 0;
+}
+
+.notes-close-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 2rem;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.notes-close-btn:hover {
+    background-color: var(--accent-red);
+    color: var(--bg-panel);
+}
+
+.notes-modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+#notes-content {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    line-height: 1.8;
+}
+
+#notes-content h3 {
+    color: var(--text-primary);
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+#notes-content ul,
+#notes-content ol {
+    margin-left: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+#notes-content li {
+    margin-bottom: 0.5rem;
+}
+
+#notes-content code {
+    background-color: var(--bg-terminal);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    color: var(--accent-coral);
+}
+
+#notes-content pre {
+    background-color: var(--bg-terminal);
+    padding: 1rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin: 1rem 0;
+}
+
+#notes-content pre code {
+    padding: 0;
+    background: none;
+}

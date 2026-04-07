@@ -12,7 +12,7 @@
  * @returns {object} Parsed command object
  */
 function parseCommand(input) {
-    const trimmed = input.trim().replace(/\s+/g, ' ');
+    const trimmed = input.trim();
     
     if (trimmed === '') {
         return {
@@ -23,7 +23,44 @@ function parseCommand(input) {
         };
     }
     
-    const tokens = trimmed.split(' ');
+    // Tokenize while respecting quotes
+    const tokens = [];
+    let currentToken = '';
+    let inSingleQuote = false;
+    let inDoubleQuote = false;
+    
+    for (let i = 0; i < trimmed.length; i++) {
+        const char = trimmed[i];
+        
+        if (char === "'" && !inDoubleQuote) {
+            inSingleQuote = !inSingleQuote;
+            // Don't include the quote in the token
+        } else if (char === '"' && !inSingleQuote) {
+            inDoubleQuote = !inDoubleQuote;
+            // Don't include the quote in the token
+        } else if (char === ' ' && !inSingleQuote && !inDoubleQuote) {
+            if (currentToken.length > 0) {
+                tokens.push(currentToken);
+                currentToken = '';
+            }
+        } else {
+            currentToken += char;
+        }
+    }
+    
+    if (currentToken.length > 0) {
+        tokens.push(currentToken);
+    }
+    
+    if (tokens.length === 0) {
+        return {
+            command: '',
+            flags: [],
+            values: [],
+            raw: trimmed
+        };
+    }
+    
     const command = tokens[0];
     const flags = [];
     const values = [];
@@ -34,8 +71,9 @@ function parseCommand(input) {
         if (token.startsWith('-')) {
             if (token.startsWith('--')) {
                 flags.push(token);
-            } else if (token.length > 2 && !token.includes('=')) {
+            } else if (token.length > 2 && !token.includes('=') && command !== 'find') {
                 // Combined short flags: -czf -> -c, -z, -f
+                // Not applied to 'find' since its predicates (-type, -exec, etc.) are not combined flags
                 for (let j = 1; j < token.length; j++) {
                     flags.push('-' + token[j]);
                 }
@@ -94,6 +132,26 @@ function checkRequirements(parsed, expected) {
         }
     }
     
+    // Check ordered values if specified (values must appear in exact order)
+    if (expected.orderedValues && expected.orderedValues.length > 0) {
+        let lastIndex = -1;
+        for (const orderedValue of expected.orderedValues) {
+            const currentIndex = parsed.values.indexOf(orderedValue);
+            if (currentIndex === -1) {
+                result.missingValues.push(orderedValue);
+            } else if (currentIndex <= lastIndex) {
+                result.message = `Arguments must be in the correct order.`;
+                return result;
+            }
+            lastIndex = currentIndex;
+        }
+        
+        if (result.missingValues.length > 0) {
+            result.message = `Missing required arguments or incorrect values.`;
+            return result;
+        }
+    }
+    
     result.valid = true;
     result.message = 'Correct! Command structure is valid.';
     return result;
@@ -113,7 +171,9 @@ function validateCommand(input, expected) {
         };
     }
     
-    if (!isCommandSupported(parsed.command)) {
+    // Allow script execution via ./ prefix (e.g. ./hello.sh)
+    const isScriptExec = parsed.command.startsWith('./');
+    if (!isScriptExec && !isCommandSupported(parsed.command)) {
         return {
             valid: false,
             message: `Command '${parsed.command}' is not supported in this trainer.`,

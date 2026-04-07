@@ -123,6 +123,45 @@ function setupEventListeners() {
     
     // Clear terminal history
     elements.clearHistoryBtn.addEventListener('click', clearTerminalHistory);
+    
+    // Notes modal
+    elements.notesBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        openNotesModal();
+    });
+    elements.notesCloseBtn.addEventListener('click', closeNotesModal);
+    elements.notesModal.addEventListener('click', (e) => {
+        if (e.target === elements.notesModal) {
+            closeNotesModal();
+        }
+    });
+    // Close modal with Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && elements.notesModal.classList.contains('active')) {
+            closeNotesModal();
+        }
+    });
+}
+
+// ==================== NOTES MODAL ====================
+
+/**
+ * Open the notes modal for the current section
+ */
+function openNotesModal() {
+    const sectionId = appState.currentSectionId;
+    const notes = getSectionNotes(sectionId);
+    
+    elements.notesModalTitle.textContent = `Notes: ${notes.title}`;
+    elements.notesContent.innerHTML = notes.content;
+    elements.notesModal.classList.add('active');
+}
+
+/**
+ * Close the notes modal
+ */
+function closeNotesModal() {
+    elements.notesModal.classList.remove('active');
 }
 
 // ==================== SECTION MANAGEMENT ====================
@@ -145,6 +184,16 @@ function loadSection(sectionId) {
     
     // Update current section ID
     appState.currentSectionId = sectionId;
+    
+    // Reset simulated user state for this section (isolate state per section)
+    if (typeof resetSimulatedUsersForSection === 'function') {
+        resetSimulatedUsersForSection(sectionId);
+    }
+    
+    // Reset filesystem state for this section (isolate state per section)
+    if (typeof resetFileSystemStateForSection === 'function') {
+        resetFileSystemStateForSection(sectionId);
+    }
     
     // Clear command history for new section
     appState.commandHistory = [];
@@ -255,8 +304,22 @@ function handleSubmit() {
         return;
     }
     
+    // Special handler for 'vi' command in Section 4 (Shell Scripting)
+    if (appState.currentSectionId === 4 && handleViCommandSection4(input, task)) {
+        return;
+    }
+    
     // Check if this is a help command (-h flag)
     if (handleHelpCommand(input, task, grepParsed)) {
+        return;
+    }
+    
+    // Validate command first (strip grep if present)
+    const commandToValidate = grepParsed ? grepParsed.command : input;
+    const validationResult = validateCommand(commandToValidate, task.expected);
+    
+    if (validationResult.valid) {
+        handleCorrectAnswer(task, input, grepParsed);
         return;
     }
     
@@ -265,15 +328,7 @@ function handleSubmit() {
         return;
     }
     
-    // Validate command (strip grep if present)
-    const commandToValidate = grepParsed ? grepParsed.command : input;
-    const validationResult = validateCommand(commandToValidate, task.expected);
-    
-    if (validationResult.valid) {
-        handleCorrectAnswer(task, input, grepParsed);
-    } else {
-        handleIncorrectAnswer(validationResult);
-    }
+    handleIncorrectAnswer(validationResult);
 }
 
 /**
@@ -427,8 +482,9 @@ function handleHelpCommand(input, task, grepParsed) {
     const commandToCheck = grepParsed ? grepParsed.command : input;
     const tokens = commandToCheck.trim().split(/\s+/);
     
-    // Check if this is a help command format (command -h or command --help)
-    if (tokens.length !== 2 || (tokens[1] !== '-h' && tokens[1] !== '--help')) {
+    // Check if this is a help command format (command -h, command --help, or command --longhelp)
+    const validHelpFlags = ['-h', '--help', '--longhelp'];
+    if (tokens.length !== 2 || !validHelpFlags.includes(tokens[1])) {
         return false;
     }
     
@@ -457,6 +513,147 @@ function handleHelpCommand(input, task, grepParsed) {
 }
 
 /**
+ * Handle vi command in Section 4 (Shell Scripting)
+ * Opens modal editor instead of normal validation
+ * @param {string} input - User input
+ * @param {object} task - Current task
+ * @returns {boolean} - True if this was a vi command that was handled
+ */
+function handleViCommandSection4(input, task) {
+    const parsed = parseCommand(input);
+    
+    // Check if this is a vi or vim command
+    if (parsed.command !== 'vi' && parsed.command !== 'vim') {
+        return false;
+    }
+    
+    // Check if filename is provided
+    if (parsed.values.length === 0) {
+        addResultToHistory('vim: Missing filename\nUsage: vim <filename>', 'error');
+        return true;
+    }
+    
+    const filename = parsed.values[0];
+    
+    // Open modal editor
+    if (typeof ViModal !== 'undefined') {
+        // Create a mock filesystem object for the modal
+        const mockFs = {
+            resolvePath: (path) => {
+                // Just return the path as-is for Section 4
+                // Users work in their current directory
+                if (!path.startsWith('/')) {
+                    return `/${path}`;
+                }
+                return path;
+            },
+            getNode: (path) => {
+                // Check if file exists in our virtual state
+                const fsState = getFileSystemState();
+                if (fsState[path]) {
+                    return {
+                        type: 'file',
+                        content: fsState[path].content || '',
+                        permissions: fsState[path].mode || 'rw-r--r--',
+                        owner: fsState[path].owner || 'root',
+                        group: fsState[path].group || 'root'
+                    };
+                }
+                // Return current directory
+                if (path === '/' || path === '.') {
+                    return {
+                        type: 'directory',
+                        children: {}
+                    };
+                }
+                return null;
+            },
+            checkPermission: () => true // Always allow in practice mode
+        };
+        
+        // Create a mock terminal object
+        const mockTerminal = {
+            addOutput: (text) => {
+                addResultToHistory(text, 'info');
+            },
+            restoreFromEditor: (shouldValidate = false) => {
+                // Only validate if the modal was closed with "Save & Exit"
+                if (shouldValidate) {
+                    const fullPath = mockFs.resolvePath(filename);
+                    const fileNode = mockFs.getNode(fullPath);
+                    
+                    if (fileNode && fileNode.content) {
+                        // Check if this task has script validation requirements
+                        const scriptValidation = findScriptValidationInTask(task, fullPath);
+                        
+                        if (scriptValidation) {
+                            // Validate the script content
+                            const validationResult = validateScript(fullPath, mockFs, scriptValidation);
+                            
+                            if (validationResult.valid) {
+                                handleCorrectAnswer(task, input, null);
+                            } else {
+                                addResultToHistory(validationResult.message, 'error');
+                            }
+                        } else {
+                            // If we can't find validation requirements for a vi task, something is wrong
+                            addResultToHistory(`Error: No validation requirements found for ${filename}. Please report this issue.`, 'error');
+                        }
+                    } else {
+                        addResultToHistory('No script content found. Please write your script and click "Save & Exit".', 'error');
+                    }
+                }
+                
+                elements.terminalInput.focus();
+            }
+        };
+        
+        const fullPath = mockFs.resolvePath(filename);
+        const existingContent = mockFs.getNode(fullPath)?.content || '';
+        
+        const modal = new ViModal(mockTerminal, mockFs);
+        modal.open(fullPath, existingContent);
+        
+        return true;
+    }
+    
+    // Fallback if modal not available
+    addResultToHistory('vim: Editor not available', 'error');
+    return true;
+}
+
+/**
+ * Find script validation requirements in task
+ * @param {object} task - Current task
+ * @param {string} filepath - Script file path
+ * @returns {object|null} - Validation requirements or null
+ */
+function findScriptValidationInTask(task, filepath) {
+    if (!task.expected || !Array.isArray(task.expected)) {
+        return null;
+    }
+    
+    // Normalize filepath for comparison (remove leading slash if present)
+    const normalizedPath = filepath.startsWith('/') ? filepath.substring(1) : filepath;
+    
+    for (const expected of task.expected) {
+        if (expected.command === 'vi' || expected.command === 'vim') {
+            // Check if this expected command matches the filepath
+            if (expected.requiredValues) {
+                for (const reqValue of expected.requiredValues) {
+                    const normalizedReqValue = reqValue.startsWith('/') ? reqValue.substring(1) : reqValue;
+                    if (normalizedReqValue === normalizedPath) {
+                        return expected.scriptValidation || null;
+                    }
+                }
+            }
+        }
+    }
+    
+    return null;
+}
+
+/**
  * Handle pre-check commands for Implementation tasks
  * @param {string} input - User input
  * @param {object} task - Current task
@@ -475,7 +672,11 @@ function handlePreCheckCommand(input, task, grepParsed) {
         return false;
     }
     
-    // This is a valid pre-check - show output but don't complete task
+    // This is a valid pre-check - update state if needed (before showing output)
+    updateSimulatedUserState(input);
+    updateFileSystemStateFromCommand(input);
+    
+    // Show output
     const preCheckOutput = generatePreCheckOutput(task, input, grepParsed);
     
     if (preCheckOutput) {
@@ -492,6 +693,12 @@ function handlePreCheckCommand(input, task, grepParsed) {
  * @param {object} grepParsed - Parsed grep info
  */
 function handleCorrectAnswer(task, input, grepParsed) {
+    // Update simulated user state if this is a chage command
+    updateSimulatedUserState(input);
+    
+    // Update filesystem state if this is a chmod/chown/chgrp/setfacl command
+    updateFileSystemStateFromCommand(input);
+    
     // Generate and show simulated output for audit tasks
     const simulatedOutput = generateSimulatedOutput(task, input, grepParsed);
     
@@ -523,6 +730,141 @@ function handleCorrectAnswer(task, input, grepParsed) {
     updateCurrentTask(section);
     updateNavigationButtons();
     saveProgress();
+}
+
+/**
+ * Update simulated user state based on command
+ * @param {string} input - User's input command
+ */
+function updateSimulatedUserState(input) {
+    // Parse chage commands to update user state
+    const chageMatch = input.match(/chage\s+(.+)/);
+    if (!chageMatch) return;
+    
+    const args = chageMatch[1].trim().split(/\s+/);
+    let username = null;
+    let updates = {};
+    
+    // Parse arguments
+    for (let i = 0; i < args.length; i++) {
+        const arg = args[i];
+        if (arg === '-M' || arg === '--maxdays') {
+            updates.maxPasswordAge = parseInt(args[i + 1]);
+            i++;
+        } else if (arg === '-m' || arg === '--mindays') {
+            updates.minPasswordAge = parseInt(args[i + 1]);
+            i++;
+        } else if (arg === '-W' || arg === '--warndays') {
+            updates.warnDays = parseInt(args[i + 1]);
+            i++;
+        } else if (arg === '-I' || arg === '--inactive') {
+            updates.passwordInactive = parseInt(args[i + 1]);
+            i++;
+        } else if (arg === '-E' || arg === '--expiredate') {
+            updates.accountExpiry = args[i + 1];
+            i++;
+        } else if (!arg.startsWith('-')) {
+            username = arg;
+        }
+    }
+    
+    // Apply updates to current section's user state
+    if (username && typeof getSimulatedUsers === 'function') {
+        const simulatedUsers = getSimulatedUsers();
+        if (simulatedUsers[username]) {
+            Object.assign(simulatedUsers[username], updates);
+            console.log(`📝 Updated simulated user state for ${username} (Section ${appState.currentSectionId}):`, updates);
+        }
+    }
+}
+
+/**
+ * Update filesystem state based on command
+ * @param {string} input - User's input command
+ */
+function updateFileSystemStateFromCommand(input) {
+    if (typeof updateFileSystemState !== 'function') return;
+    
+    const tokens = input.trim().split(/\s+/);
+    const command = tokens[0];
+    
+    // Parse chmod commands
+    if (command === 'chmod') {
+        const modeIdx = tokens.findIndex(t => !t.startsWith('-') && t !== 'chmod');
+        if (modeIdx !== -1) {
+            const mode = tokens[modeIdx];
+            const path = tokens[modeIdx + 1];
+            if (path) {
+                // Normalize octal mode (755 -> 0755)
+                const normalizedMode = mode.match(/^\d{3}$/) ? '0' + mode : mode;
+                updateFileSystemState(path, { mode: normalizedMode });
+            }
+        }
+    }
+    
+    // Parse chown commands
+    else if (command === 'chown') {
+        // Identify path by leading '/', owner/group by not starting with '/' or '-'
+        const pathIdx = tokens.findIndex((t, i) => i > 0 && t.startsWith('/'));
+        const ownerIdx = tokens.findIndex((t, i) => i > 0 && !t.startsWith('-') && !t.startsWith('/'));
+        if (pathIdx !== -1 && ownerIdx !== -1) {
+            const path = tokens[pathIdx];
+            const ownerGroup = tokens[ownerIdx];
+            const updates = {};
+            if (ownerGroup.includes(':')) {
+                const [owner, group] = ownerGroup.split(':');
+                if (owner) updates.owner = owner;
+                if (group) updates.group = group;
+            } else {
+                updates.owner = ownerGroup;
+            }
+            if (Object.keys(updates).length > 0) {
+                updateFileSystemState(path, updates);
+            }
+        }
+    }
+    
+    // Parse chgrp commands
+    else if (command === 'chgrp') {
+        const groupIdx = tokens.findIndex(t => !t.startsWith('-') && t !== 'chgrp');
+        if (groupIdx !== -1) {
+            const group = tokens[groupIdx];
+            const path = tokens[groupIdx + 1];
+            if (path && group) {
+                updateFileSystemState(path, { group: group });
+            }
+        }
+    }
+    
+    // Parse setfacl commands
+    else if (command === 'setfacl') {
+        const mIdx = tokens.indexOf('-m');
+        const xIdx = tokens.indexOf('-x');
+        const pathIdx = tokens.length - 1;
+        const path = tokens[pathIdx];
+        
+        if (path && (mIdx !== -1 || xIdx !== -1)) {
+            const aclIdx = mIdx !== -1 ? mIdx + 1 : xIdx + 1;
+            const aclSpec = tokens[aclIdx];
+            
+            if (aclSpec) {
+                const fsState = getFileSystemState();
+                if (fsState && fsState[path]) {
+                    if (!fsState[path].acls) fsState[path].acls = [];
+                    
+                    if (mIdx !== -1) {
+                        // Add/modify ACL
+                        fsState[path].acls.push(aclSpec);
+                        console.log(`📝 Added ACL ${aclSpec} to ${path} (Section ${appState.currentSectionId})`);
+                    } else {
+                        // Remove ACL
+                        fsState[path].acls = fsState[path].acls.filter(a => !a.startsWith(aclSpec.split(':')[0]));
+                        console.log(`📝 Removed ACL ${aclSpec} from ${path} (Section ${appState.currentSectionId})`);
+                    }
+                }
+            }
+        }
+    }
 }
 
 /**

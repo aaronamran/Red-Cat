@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug - Sections Loading</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 20px;
+        }
+        .success { color: #4ade80; }
+        .error { color: #ff6666; }
+        .warning { color: #fbbf24; }
+        pre { background: #2a2a2a; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Red Cat - Section Loading Debug</h1>
+    <div id="output"></div>
+
+    <!-- Load all section files -->
+    <script src="sections/section1-essential-tools.js"></script>
+    <script src="sections/section2-users-and-groups.js"></script>
+    <script src="sections/section3-permissions-and-acls.js"></script>
+    <script src="sections/section4-shell-scripting.js"></script>
+    <script src="sections/section5-storage-lvm.js"></script>
+    <script src="sections/section6-storage-filesystems.js"></script>
+    <script src="sections/section7-remote-resources.js"></script>
+    <script src="sections/section8-systemd-processes.js"></script>
+    <script src="sections/section9-system-tuning.js"></script>
+    <script src="sections/section10-networking.js"></script>
+    <script src="sections/section11-network-security.js"></script>
+    <script src="sections/section12-selinux.js"></script>
+    <script src="sections/section13-software-management.js"></script>
+    <script src="sections/section14-task-scheduling.js"></script>
+    <script src="sections/section15-boot-maintenance.js"></script>
+    <script src="sections/section16-rootless-containers.js"></script>
+    <script src="sections/section17-time-services.js"></script>
+    
+    <!-- Load data.js -->
+    <script src="data.js"></script>
+
+    <script>
+        const output = document.getElementById('output');
+        
+        output.innerHTML += '<h2>Individual Section Data:</h2>';
+        
+        // Check each individual section variable
+        for (let i = 1; i <= 17; i++) {
+            const varName = `section${i}Data`;
+            const exists = typeof window[varName] !== 'undefined';
+            const className = exists ? 'success' : 'error';
+            const status = exists ? '✓' : '✗';
+            const title = exists ? window[varName].title : 'NOT FOUND';
+            output.innerHTML += `<div class="${className}">${status} ${varName}: ${title}</div>`;
+        }
+        
+        output.innerHTML += '<h2>Sections Array:</h2>';
+        if (typeof sections !== 'undefined') {
+            output.innerHTML += `<div class="success">✓ sections array exists with ${sections.length} items</div>`;
+            output.innerHTML += '<pre>' + JSON.stringify(sections.map(s => ({ id: s.id, title: s.title })), null, 2) + '</pre>';
+        } else {
+            output.innerHTML += '<div class="error">✗ sections array is undefined!</div>';
+        }
+    </script>
+</body>
+</html>

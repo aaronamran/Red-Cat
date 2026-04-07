@@ -324,7 +324,7 @@ class UserCommands {
             return { error: 'chage: Permission denied' };
         }
         
-        const flags = this.parseFlags(args, ['l', 'M', 'E']);
+        const flags = this.parseFlags(args, ['l', 'M', 'm', 'W', 'I', 'E']);
         const username = flags.args[0];
         
         if (!username) {
@@ -335,28 +335,65 @@ class UserCommands {
             return { error: `chage: user '${username}' does not exist` };
         }
         
-        // -l: List password expiry info
+        const user = this.fs.users[username];
+        
+        // -l: List password expiry info (using dynamic generation)
         if (flags.l) {
-            return { output: `Last password change\t\t\t\t: Dec 05, 2024\nPassword expires\t\t\t\t: never\nPassword inactive\t\t\t\t: never\nAccount expires\t\t\t\t\t: never\nMinimum number of days between password change\t\t: 0\nMaximum number of days between password change\t\t: 99999\nNumber of days of warning before password expires\t: 7` };
+            // Use datetime utility if loaded, otherwise fall back to static output
+            if (typeof generateChageOutput === 'function') {
+                return { output: generateChageOutput(user) };
+            }
+            // Fallback for compatibility
+            return { output: `Last password change\t\t\t\t: Dec 05, 2024\nPassword expires\t\t\t\t: never\nPassword inactive\t\t\t\t: never\nAccount expires\t\t\t\t\t: never\nMinimum number of days between password change\t\t: ${user.minPasswordAge || 0}\nMaximum number of days between password change\t\t: ${user.maxPasswordAge || 99999}\nNumber of days of warning before password expires\t: ${user.warnDays || 7}` };
         }
         
         // -M: Set maximum password age
-        if (flags.M) {
+        if (flags.M !== undefined) {
             const days = flags.args[1];
             if (!days) {
                 return { error: 'chage: option requires an argument -- M' };
             }
-            this.fs.users[username].maxPasswordAge = parseInt(days);
+            user.maxPasswordAge = parseInt(days);
+            return { output: '' };
+        }
+        
+        // -m: Set minimum password age
+        if (flags.m !== undefined) {
+            const days = flags.args[1];
+            if (!days) {
+                return { error: 'chage: option requires an argument -- m' };
+            }
+            user.minPasswordAge = parseInt(days);
+            return { output: '' };
+        }
+        
+        // -W: Set warning days
+        if (flags.W !== undefined) {
+            const days = flags.args[1];
+            if (!days) {
+                return { error: 'chage: option requires an argument -- W' };
+            }
+            user.warnDays = parseInt(days);
+            return { output: '' };
+        }
+        
+        // -I: Set inactive days
+        if (flags.I !== undefined) {
+            const days = flags.args[1];
+            if (!days) {
+                return { error: 'chage: option requires an argument -- I' };
+            }
+            user.passwordInactive = parseInt(days);
             return { output: '' };
         }
         
         // -E: Set account expiration date
-        if (flags.E) {
+        if (flags.E !== undefined) {
             const date = flags.args[1];
             if (!date) {
                 return { error: 'chage: option requires an argument -- E' };
             }
-            this.fs.users[username].expireDate = date;
+            user.accountExpiry = date;
             return { output: '' };
         }
         

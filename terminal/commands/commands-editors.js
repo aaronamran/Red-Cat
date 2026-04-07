@@ -40,7 +40,18 @@ class EditorCommands {
         
         // Open editor (needs window.terminal reference)
         if (typeof window !== 'undefined' && window.terminal) {
-            window.terminal.openEditor('vim', fullPath, content);
+            // Check if we're in Section 4 (Shell Scripting) and use modal editor
+            const isSection4 = typeof appState !== 'undefined' && appState.currentSectionId === 4;
+            const useModal = isSection4 && typeof ViModal !== 'undefined';
+            
+            if (useModal) {
+                // Use modal editor for Section 4
+                const modal = new ViModal(window.terminal, this.fs);
+                modal.open(fullPath, content);
+            } else {
+                // Use traditional vi editor for other sections
+                window.terminal.openEditor('vim', fullPath, content);
+            }
             return { output: '', error: '' };
         }
         

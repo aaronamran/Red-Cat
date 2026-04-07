@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Notes</title>
+</head>
+<body>
+    <h1>Testing Notes Function</h1>
+    <button id="test-btn">Click to Test getSectionNotes(1)</button>
+    <div id="output"></div>
+
+    <script src="notes.js"></script>
+    <script>
+        document.getElementById('test-btn').addEventListener('click', () => {
+            console.log('Testing getSectionNotes function...');
+            console.log('typeof getSectionNotes:', typeof getSectionNotes);
+            
+            if (typeof getSectionNotes === 'function') {
+                const notes = getSectionNotes(1);
+                console.log('Section 1 notes:', notes);
+                document.getElementById('output').innerHTML = `
+                    <h2>${notes.title}</h2>
+                    <div>${notes.content}</div>
+                `;
+            } else {
+                document.getElementById('output').innerHTML = '<p style="color:red;">ERROR: getSectionNotes is not a function!</p>';
+                console.error('getSectionNotes is not defined!');
+            }
+        });
+    </script>
+</body>
+</html>

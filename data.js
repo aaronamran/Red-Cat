@@ -28,21 +28,23 @@
 
 // Load section data from individual files
 const sections = [
-    section1Data,
-    section2Data,
-    section3Data,
-    section4Data,
-    section5Data,
-    section6Data,
-    section7Data,
-    section8Data,
-    section9Data,
-    section10Data,
-    section11Data,
-    section12Data,
-    section13Data,
-    section14Data,
-    section15Data
+    section1Data, // Essential Tools
+    section2Data, // Users & Groups
+    section3Data, // Permissions & ACLs
+    section4Data, // Shell Scripting
+    section5Data, // Storage: Partitions & LVM
+    section6Data, // Storage: File Systems
+    section7Data, // Remote Resources
+    section8Data, // Systemd & Processes
+    section9Data, // System Tuning & Analysis
+    section10Data, // Networking
+    section11Data, // Network Security
+    section12Data, // SELinux Security
+    section13Data, // Software Management
+    section14Data, // Task Scheduling
+    section15Data, // Boot Process & Maintenance
+    section16Data, // Rootless Containers
+    section17Data  // Time Services
 ];
 
 /**
@@ -208,7 +210,15 @@ const supportedCommands = [
     'rpm2cpio',
     'flatpak',
     'nc',
-    'lsof'
+    'lsof',
+    // Additional LVM commands
+    'pvscan',
+    'vgscan',
+    'lvscan',
+    // Additional filesystem commands
+    'mkfs.vfat',
+    // Container and user session management
+    'loginctl'
 ];
 
 /**

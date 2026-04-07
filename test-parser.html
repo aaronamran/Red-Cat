@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Parser Test</title>
+</head>
+<body>
+    <h1>Parser Test</h1>
+    <input type="text" id="commandInput" value="find /srv/files -type f -exec chmod 644 {} +" style="width: 500px">
+    <button onclick="testParse()">Parse</button>
+    <pre id="output"></pre>
+
+    <script src="modules/validation.js"></script>
+    <script>
+        function testParse() {
+            const input = document.getElementById('commandInput').value;
+            const parsed = parseCommand(input);
+            
+            const expected = { 
+                command: "find", 
+                requiredFlags: ["-type", "-exec"], 
+                orderedValues: ["/srv/files", "f", "chmod", "644", "{}", "+"] 
+            };
+            
+            const result = checkRequirements(parsed, expected);
+            
+            document.getElementById('output').textContent = 
+                'Input: ' + input + '\n\n' +
+                'Parsed:\n' + JSON.stringify(parsed, null, 2) + '\n\n' +
+                'Expected:\n' + JSON.stringify(expected, null, 2) + '\n\n' +
+                'Validation Result:\n' + JSON.stringify(result, null, 2);
+        }
+        
+        // Auto-run on load
+        window.onload = testParse;
+    </script>
+</body>
+</html>
