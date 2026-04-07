@@ -259,12 +259,15 @@ function getSectionById(sectionId, questionSetIndex = null) {
     const setKey = `set${setIndex}`;
     const tasks = baseSection.questionSets[setKey];
     
+    // Compute total points from the selected task set
+    const setTotalPoints = tasks.reduce((sum, task) => sum + (task.points || 0), 0);
+
     // Return section with the selected question set
     return {
         id: baseSection.id,
         title: baseSection.title,
         description: baseSection.description,
-        totalPoints: baseSection.totalPoints,
+        totalPoints: setTotalPoints,
         tasks: tasks,
         questionSetIndex: setIndex  // Track which set was used
     };

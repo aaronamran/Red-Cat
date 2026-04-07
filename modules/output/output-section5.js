@@ -1,229 +1,169 @@
-/** Red Cat - Section 5 */
+/** Red Cat - Section 5: Storage - Partitions & LVM */
 
+/**
+ * Section 5 Output Generator — called for Audit tasks and Implementation task.id===5
+ *
+ * set1 task flow:
+ *   id1  Audit  lsblk                      → raw disk tree
+ *   id2  Audit  blkid/lsblk /dev/sdb       → raw disk info (before pvcreate)
+ *   id3  Impl   pvcreate /dev/sdb1         → silent (no output from generateSimulatedOutput)
+ *   id4  Audit  pvdisplay/pvs/pvscan       → sdb1 as PV, no VG yet
+ *   id5  Impl   vgcreate vg_data           → passthrough (task.id===5 exception in core)
+ *   id6  Audit  vgdisplay/vgs/vgscan       → vg_data with sdb1
+ *   id7  Impl   lvcreate lv_app 2G         → silent
+ *   id8  Audit  lvdisplay/lvs/lvscan       → lv_app 2.00g in vg_data
+ *   id9  Impl   lvextend +500M lv_app      → silent
+ */
 function generateSection5Output(command, input, tokens) {
-    // systemctl commands
-    if (command === 'systemctl') {
-        // Check httpd status
-        if (input.includes('status') && input.includes('httpd')) {
-            return '● httpd.service - The Apache HTTP Server\n     Loaded: loaded (/usr/lib/systemd/system/httpd.service; enabled; vendor preset: disabled)\n     Active: active (running) since Sun 2026-02-23 10:15:32 EST; 2h 15min ago\n       Docs: man:httpd.service(8)\n   Main PID: 1234 (httpd)\n     Status: "Total requests: 0; Idle/Busy workers 100/0;Requests/sec: 0; Bytes served/sec:   0 B/sec"\n      Tasks: 213 (limit: 23065)\n     Memory: 24.5M\n        CPU: 1.234s\n     CGroup: /system.slice/httpd.service\n             ├─1234 /usr/sbin/httpd -DFOREGROUND\n             ├─1235 /usr/sbin/httpd -DFOREGROUND\n             ├─1236 /usr/sbin/httpd -DFOREGROUND\n             └─1237 /usr/sbin/httpd -DFOREGROUND\n\nFeb 23 10:15:32 localhost.localdomain systemd[1]: Starting The Apache HTTP Server...\nFeb 23 10:15:32 localhost.localdomain httpd[1234]: AH00558: httpd: Could not reliably determine server fully qualified domain name\nFeb 23 10:15:32 localhost.localdomain systemd[1]: Started The Apache HTTP Server.';
+
+    // ── lsblk ─────────────────────────────────────────────────────────────────
+    if (command === 'lsblk') {
+        if (input.includes('/dev/sdb') || (tokens.length > 1 && tokens[1] === 'sdb')) {
+            // task 2: lsblk /dev/sdb — disk + partition present, no LVM yet
+            return 'NAME   MAJ:MIN RM SIZE RO TYPE MOUNTPOINT\nsdb      8:16   0  10G  0 disk \n└─sdb1   8:17   0  10G  0 part ';
         }
-        
-        if (input.includes('is-active') && input.includes('httpd')) {
-            return 'active';
-        }
-        
-        // Check httpd enabled status
-        if (input.includes('is-enabled') && input.includes('httpd')) {
-            return 'enabled';
-        }
-        
-        // systemctl enable commands (Implementation tasks)
-        if (input.includes('enable') && !input.includes('--now') && !input.includes('is-enabled')) {
-            if (input.includes('httpd')) {
-                return 'Created symlink /etc/systemd/system/multi-user.target.wants/httpd.service → /usr/lib/systemd/system/httpd.service.';
-            }
-            if (input.includes('firewalld')) {
-                return 'Created symlink /etc/systemd/system/dbus-org.fedoraproject.FirewallD1.service → /usr/lib/systemd/system/firewalld.service.\nCreated symlink /etc/systemd/system/multi-user.target.wants/firewalld.service → /usr/lib/systemd/system/firewalld.service.';
-            }
-            if (input.includes('sshd')) {
-                return 'Created symlink /etc/systemd/system/multi-user.target.wants/sshd.service → /usr/lib/systemd/system/sshd.service.';
-            }
-            if (input.includes('crond')) {
-                return 'Created symlink /etc/systemd/system/multi-user.target.wants/crond.service → /usr/lib/systemd/system/crond.service.';
-            }
-            // Generic enable output
-            return 'Created symlink /etc/systemd/system/multi-user.target.wants/' + input.match(/enable\s+(\S+)/)?.[1] + '.service → /usr/lib/systemd/system/' + input.match(/enable\s+(\S+)/)?.[1] + '.service.';
-        }
-        
-        // systemctl disable command (Implementation tasks)
-        if (input.includes('disable') && !input.includes('--now')) {
-            if (input.includes('httpd')) {
-                return 'Removed /etc/systemd/system/multi-user.target.wants/httpd.service.';
-            }
-            if (input.includes('firewalld')) {
-                return 'Removed /etc/systemd/system/multi-user.target.wants/firewalld.service.\nRemoved /etc/systemd/system/dbus-org.fedoraproject.FirewallD1.service.';
-            }
-            // Generic disable output
-            return 'Removed /etc/systemd/system/multi-user.target.wants/' + input.match(/disable\s+(\S+)/)?.[1] + '.service.';
-        }
-        
-        // systemctl start/stop/restart (Implementation tasks - silent success)
-        if (input.includes('start') || input.includes('stop') || input.includes('restart')) {
-            if (!input.includes('status')) {
-                return ''; // Silent on success
-            }
-        }
-        
-        // systemctl daemon-reload (Implementation task - silent success)
-        if (input.includes('daemon-reload')) {
-            return '';
-        }
-        
-        // Get default boot target
-        if (input.includes('get-default')) {
-            return 'multi-user.target';
-        }
-        
-        // Check crond status (stopped)
-        if (input.includes('status') && input.includes('crond')) {
-            return '○ crond.service - Command Scheduler\n     Loaded: loaded (/usr/lib/systemd/system/crond.service; enabled; vendor preset: enabled)\n     Active: inactive (dead) since Sun 2026-02-23 12:30:15 EST; 5min ago\n       Docs: man:crond(8)\n             man:crontab(5)\n    Process: 1145 ExecStart=/usr/sbin/crond -n $CRONDARGS (code=exited, status=0/SUCCESS)\n   Main PID: 1145 (code=exited, status=0/SUCCESS)\n        CPU: 12ms\n\nFeb 23 08:15:42 localhost.localdomain systemd[1]: Started Command Scheduler.\nFeb 23 12:30:15 localhost.localdomain systemd[1]: Stopping Command Scheduler...\nFeb 23 12:30:15 localhost.localdomain systemd[1]: crond.service: Deactivated successfully.\nFeb 23 12:30:15 localhost.localdomain systemd[1]: Stopped Command Scheduler.';
-        }
-        
-        if (input.includes('is-active') && input.includes('crond')) {
-            return 'inactive';
-        }
-        
-        // sshd service status
-        if (input.includes('status') && input.includes('sshd')) {
-            return '● sshd.service - OpenSSH server daemon\n     Loaded: loaded (/usr/lib/systemd/system/sshd.service; enabled; vendor preset: enabled)\n     Active: active (running) since Sun 2026-02-23 08:15:42 EST; 8h ago\n       Docs: man:sshd(8)\n             man:sshd_config(5)\n   Main PID: 1098 (sshd)\n      Tasks: 1 (limit: 23065)\n     Memory: 4.2M\n        CPU: 234ms\n     CGroup: /system.slice/sshd.service\n             └─1098 /usr/sbin/sshd -D';
-        }
+        // task 1: lsblk — all block devices, sdb/sdc are raw disks
+        return 'NAME          MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT\nsda             8:0    0   20G  0 disk \n├─sda1          8:1    0    1G  0 part /boot\n└─sda2          8:2    0   19G  0 part \n  ├─rhel-root 253:0    0   17G  0 lvm  /\n  └─rhel-swap 253:1    0    2G  0 lvm  [SWAP]\nsdb             8:16   0   10G  0 disk \n└─sdb1          8:17   0   10G  0 part \nsdc             8:32   0    5G  0 disk \n└─sdc1          8:33   0    5G  0 part \nsr0            11:0    1 1024M  0 rom  ';
     }
-    
-    // journalctl commands
-    if (command === 'journalctl') {
-        // View journal errors
-        if ((input.includes('-p') || input.includes('--priority')) && 
-            (input.includes('err') || input.includes('3'))) {
-            return '-- Journal begins at Mon 2026-02-23 08:15:30 EST, ends at Sun 2026-02-23 12:35:42 EST. --\nFeb 23 08:16:05 localhost.localdomain kernel: ACPI BIOS Error (bug): Could not resolve symbol\nFeb 23 08:16:12 localhost.localdomain systemd[1]: Failed to start Network Manager Wait Online.\nFeb 23 10:22:35 localhost.localdomain bluetoothd[892]: Failed to set privacy: Rejected (0x0b)';
-        }
-        
-        // View httpd journal
-        if ((input.includes('-u') || input.includes('--unit')) && input.includes('httpd')) {
-            return '-- Journal begins at Mon 2026-02-23 08:15:30 EST, ends at Sun 2026-02-23 12:35:42 EST. --\nFeb 23 10:15:32 localhost.localdomain systemd[1]: Starting The Apache HTTP Server...\nFeb 23 10:15:32 localhost.localdomain httpd[1234]: Server configured, listening on: port 80\nFeb 23 10:15:32 localhost.localdomain systemd[1]: Started The Apache HTTP Server.';
-        }
-        
-        // View crond journal
-        if ((input.includes('-u') || input.includes('--unit')) && input.includes('crond')) {
-            return '-- Journal begins at Mon 2026-02-23 08:15:30 EST, ends at Sun 2026-02-23 12:35:42 EST. --\nFeb 23 08:15:42 localhost.localdomain systemd[1]: Started Command Scheduler.\nFeb 23 12:30:15 localhost.localdomain systemd[1]: Stopping Command Scheduler...\nFeb 23 12:30:15 localhost.localdomain systemd[1]: crond.service: Deactivated successfully.';
-        }
+
+    // ── blkid (task 2) ────────────────────────────────────────────────────────
+    if (command === 'blkid') {
+        // /dev/sdb before pvcreate: disk has no filesystem signature — real blkid returns nothing
+        return '';
     }
-    
-    // ps commands - process listings
-    if (command === 'ps') {
-        // ps aux - full process list
-        if (input.includes('aux') && !input.includes('grep') && !input.includes('sort')) {
-            return 'USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND\nroot           1  0.0  0.1 243512 15632 ?        Ss   08:15   0:02 /usr/lib/systemd/systemd --switched-root --system --deserialize 18\nroot           2  0.0  0.0      0     0 ?        S    08:15   0:00 [kthreadd]\nroot           3  0.0  0.0      0     0 ?        I<   08:15   0:00 [rcu_gp]\nroot        1098  0.0  0.0 112860  7420 ?        Ss   08:15   0:00 /usr/sbin/sshd -D\nroot        1145  0.0  0.0  25388  2548 ?        Ss   08:15   0:00 /usr/sbin/crond -n\napache      1234  0.2  0.5 224080 87456 ?        Ss   10:15   0:02 /usr/sbin/httpd -DFOREGROUND\napache      1235  0.0  0.5 224216 87592 ?        S    10:15   0:00 /usr/sbin/httpd -DFOREGROUND\napache      1236  0.0  0.5 224216 87592 ?        S    10:15   0:00 /usr/sbin/httpd -DFOREGROUND\napache      1237  0.0  0.5 224216 87592 ?        S    10:15   0:00 /usr/sbin/httpd -DFOREGROUND\nroot        2345  0.1  0.2  62488 34512 ?        Ss   11:00   0:05 /usr/bin/python3 /usr/sbin/firewalld --nofork --nopid\nroot        3456  0.0  0.1  53764  9876 ?        Ss   08:15   0:00 /usr/sbin/rsyslogd -n\nroot        4567  0.0  0.0      0     0 ?        I    12:00   0:00 [kworker/0:1-events]\nroot        5678  0.0  0.0   9876  3456 pts/0    R+   16:45   0:00 ps aux';
-        }
-        
-        // ps -ef - process list with parent PIDs
-        if (hasFlags(input, 'ef')) {
-            return 'UID          PID    PPID  C STIME TTY          TIME CMD\nroot           1       0  0 08:15 ?        00:00:02 /usr/lib/systemd/systemd --switched-root --system\nroot           2       0  0 08:15 ?        00:00:00 [kthreadd]\nroot        1098       1  0 08:15 ?        00:00:00 /usr/sbin/sshd -D\nroot       1145       1  0 08:15 ?        00:00:00 /usr/sbin/crond -n\napache      1234       1  0 10:15 ?        00:00:02 /usr/sbin/httpd -DFOREGROUND\napache      1235    1234  0 10:15 ?        00:00:00 /usr/sbin/httpd -DFOREGROUND\napache      1236    1234  0 10:15 ?        00:00:00 /usr/sbin/httpd -DFOREGROUND\napache      1237    1234  0 10:15 ?        00:00:00 /usr/sbin/httpd -DFOREGROUND\nroot        2345       1  0 11:00 ?        00:00:05 /usr/bin/python3 /usr/sbin/firewalld --nofork\nroot        3456       1  0 08:15 ?        00:00:00 /usr/sbin/rsyslogd -n';
-        }
-        
-        // ps aux with grep httpd
-        if (input.includes('aux') && input.includes('grep') && input.includes('httpd')) {
-            return 'apache      1234  0.2  0.5 224080 87456 ?        Ss   10:15   0:02 /usr/sbin/httpd -DFOREGROUND\napache      1235  0.0  0.5 224216 87592 ?        S    10:15   0:00 /usr/sbin/httpd -DFOREGROUND\napache      1236  0.0  0.5 224216 87592 ?        S    10:15   0:00 /usr/sbin/httpd -DFOREGROUND\napache      1237  0.0  0.5 224216 87592 ?        S    10:15   0:00 /usr/sbin/httpd -DFOREGROUND';
-        }
-        
-        // ps -p <PID> - specific process
-        if (input.includes('-p') && input.includes('1234')) {
-            return '  PID TTY      STAT   TIME COMMAND\n 1234 ?        Ss     0:02 /usr/sbin/httpd -DFOREGROUND';
-        }
-        
-        // ps aux --sort=-pcpu - sorted by CPU usage
-        if (input.includes('sort') && input.includes('pcpu')) {
-            return 'USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND\napache      1234  0.2  0.5 224080 87456 ?        Ss   10:15   0:02 /usr/sbin/httpd -DFOREGROUND\nroot        2345  0.1  0.2  62488 34512 ?        Ss   11:00   0:05 /usr/bin/python3 /usr/sbin/firewalld --nofork\nroot           1  0.0  0.1 243512 15632 ?        Ss   08:15   0:02 /usr/lib/systemd/systemd --switched-root\nroot        1098  0.0  0.0 112860  7420 ?        Ss   08:15   0:00 /usr/sbin/sshd -D\napache      1235  0.0  0.5 224216 87592 ?        S    10:15   0:00 /usr/sbin/httpd -DFOREGROUND';
-        }
-        
-        // ps auxf - forest view
-        if (input.includes('auxf')) {
-            return 'USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND\nroot           1  0.0  0.1 243512 15632 ?        Ss   08:15   0:02 /usr/lib/systemd/systemd --switched-root\nroot        1098  0.0  0.0 112860  7420 ?        Ss   08:15   0:00  \\_ /usr/sbin/sshd -D\napache      1234  0.2  0.5 224080 87456 ?        Ss   10:15   0:02  \\_ /usr/sbin/httpd -DFOREGROUND\napache      1235  0.0  0.5 224216 87592 ?        S    10:15   0:00      \\_ /usr/sbin/httpd -DFOREGROUND\napache      1236  0.0  0.5 224216 87592 ?        S    10:15   0:00      \\_ /usr/sbin/httpd -DFOREGROUND\napache      1237  0.0  0.5 224216 87592 ?        S    10:15   0:00      \\_ /usr/sbin/httpd -DFOREGROUND';
-        }
+
+    // ── pvdisplay / pvs / pvscan (task 4: AFTER pvcreate /dev/sdb1) ──────────
+    if (command === 'pvdisplay') {
+        return '  --- Physical volume ---\n  PV Name               /dev/sdb1\n  VG Name               \n  PV Size               <10.00 GiB\n  Allocatable           yes\n  PE Size               4.00 MiB\n  Total PE              2559\n  Free PE               2559\n  Allocated PE          0\n  PV UUID               a1b2c3-d4e5-f6a7-b8c9-d0e1f2a3b4c5';
     }
-    
-    // pgrep - find process IDs
-    if (command === 'pgrep') {
-        if (input.includes('httpd')) {
-            return '1234\n1235\n1236\n1237';
-        }
-        if (input.includes('sshd')) {
-            return '1098';
-        }
-        if (input.includes('crond')) {
-            return '1145';
-        }
+
+    if (command === 'pvs') {
+        return '  PV         VG     Fmt  Attr PSize    PFree   \n  /dev/sdb1         lvm2 a--   <10.00g <10.00g';
     }
-    
-    // pstree - process tree
-    if (command === 'pstree') {
-        return 'systemd─┬─ModemManager───2*[{ModemManager}]\n        ├─NetworkManager───2*[{NetworkManager}]\n        ├─accounts-daemon───2*[{accounts-daemon}]\n        ├─crond\n        ├─dbus-daemon\n        ├─firewalld───{firewalld}\n        ├─httpd───3*[httpd]\n        ├─polkitd───2*[{polkitd}]\n        ├─rsyslogd───2*[{rsyslogd}]\n        ├─sshd\n        ├─systemd-journal\n        ├─systemd-logind\n        └─systemd-udevd';
+
+    if (command === 'pvscan') {
+        return '  PV /dev/sdb1                      lvm2 [<10.00 GiB]\n  Total: 1 [<10.00 GiB] / in use: 0 [0   ] / in no VG: 1 [<10.00 GiB]';
     }
-    
-    // top - process monitor
-    if (command === 'top') {
-        return 'top - 16:45:30 up  8:30,  1 user,  load average: 0.15, 0.21, 0.18\nTasks: 187 total,   1 running, 186 sleeping,   0 stopped,   0 zombie\n%Cpu(s):  1.2 us,  0.5 sy,  0.0 ni, 98.0 id,  0.2 wa,  0.0 hi,  0.1 si,  0.0 st\nMiB Mem :  15872.5 total,  10234.2 free,   2456.8 used,   3181.5 buff/cache\nMiB Swap:   2048.0 total,   2048.0 free,      0.0 used.  12845.6 avail Mem\n\n    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND\n   1234 apache    20   0  224080  87456  12345 S   0.2   0.5   0:02.34 httpd\n   2345 root      20   0   62488  34512   8765 S   0.1   0.2   0:05.12 firewalld\n      1 root      20   0  243512  15632  10234 S   0.0   0.1   0:02.45 systemd\n   1098 root      20   0  112860   7420   5432 S   0.0   0.0   0:00.12 sshd\n   1145 root      20   0   25388   2548   1876 S   0.0   0.0   0:00.05 crond\n   1235 apache    20   0  224216  87592  12356 S   0.0   0.5   0:00.45 httpd\n   1236 apache    20   0  224216  87592  12356 S   0.0   0.5   0:00.43 httpd\n   1237 apache    20   0  224216  87592  12356 S   0.0   0.5   0:00.41 httpd\n   3456 root      20   0   53764   9876   6543 S   0.0   0.1   0:00.23 rsyslogd';
+
+    // ── vgdisplay / vgs / vgscan (task 6: AFTER vgcreate vg_data) ────────────
+    if (command === 'vgdisplay') {
+        return '  --- Volume group ---\n  VG Name               vg_data\n  System ID             \n  Format                lvm2\n  Metadata Areas        1\n  Metadata Sequence No  1\n  VG Access             read/write\n  VG Status             resizable\n  MAX LV                0\n  Cur LV                0\n  Open LV               0\n  Max PV                0\n  Cur PV                1\n  Act PV                1\n  VG Size               <10.00 GiB\n  PE Size               4.00 MiB\n  Total PE              2559\n  Alloc PE / Size       0 / 0   \n  Free  PE / Size       2559 / <10.00 GiB\n  VG UUID               Xb1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b';
     }
-    
-    // kill verification - no output for successful kill
-    if (command === 'kill') {
-        return ''; // kill produces no output on success
+
+    if (command === 'vgs') {
+        return '  VG      #PV #LV #SN Attr   VSize    VFree   \n  vg_data   1   0   0 wz--n- <10.00g <10.00g';
     }
-    
-    // pkill verification - no output for successful kill
-    if (command === 'pkill') {
-        return ''; // pkill produces no output on success
+
+    if (command === 'vgscan') {
+        return '  Reading volume groups from cache.\n  Found volume group "vg_data" using metadata type lvm2';
     }
-    
-    // View httpd PID file
-    if ((command === 'cat' || command === 'less' || command === 'more') && 
-        input.includes('/tmp/httpd-pid.txt')) {
-        return '1234';
+
+    // ── lvdisplay / lvs / lvscan (task 8: AFTER lvcreate lv_app 2G) ──────────
+    if (command === 'lvdisplay') {
+        return '  --- Logical volume ---\n  LV Path                /dev/vg_data/lv_app\n  LV Name                lv_app\n  VG Name                vg_data\n  LV UUID                Lv1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b\n  LV Write Access        read/write\n  LV Creation host, time rhcsa-lab, Tue Apr 07 2026\n  LV Status              available\n  # open                 0\n  LV Size                2.00 GiB\n  Current LE             512\n  Segments               1\n  Allocation             inherit\n  Read ahead sectors     auto\n  - currently set to     256\n  Block device           253:2';
     }
-    
+
+    if (command === 'lvs') {
+        return '  LV       VG      Attr       LSize  Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert\n  lv_app   vg_data -wi-a-----  2.00g';
+    }
+
+    if (command === 'lvscan') {
+        return "  ACTIVE            '/dev/vg_data/lv_app' [2.00 GiB] inherit";
+    }
+
+    // ── vgcreate passthrough (task.id===5 exception in output-core) ───────────
+    // Shows confirmation output for vgcreate since it's an Implementation task
+    // that bypasses the null-return guard because task.id === 5.
+    if (command === 'vgcreate') {
+        const vgName = tokens.find((t, i) => i > 0 && !t.startsWith('-'));
+        return vgName ? `  Volume group "${vgName}" successfully created` : null;
+    }
+
     return null;
 }
 
 /**
- * Section 6: File Systems - Output Generator
+ * Section 5 Pre-Check Generator — called for allowed pre-checks on Implementation tasks
+ *
+ * task.id dispatch is safe here because:
+ *   set1 Audit tasks (1,2,4,6,8) never reach pre-check handlers
+ *   set2 has only 4 tasks, so ids 5,7,9 are exclusive to set1
+ *   ids 1,2,3 shared between sets are disambiguated by command name
  */
 function generateSection5PreCheck(task, command, input, tokens) {
-    // Task 1 Pre-check: httpd not running yet
-    if (task.id === 1) {
-        if (command === 'systemctl' && input.includes('status') && input.includes('httpd')) {
-            return '○ httpd.service - The Apache HTTP Server\n     Loaded: loaded (/usr/lib/systemd/system/httpd.service; disabled; vendor preset: disabled)\n     Active: inactive (dead)\n       Docs: man:httpd.service(8)';
-        }
-        if (command === 'systemctl' && input.includes('is-active') && input.includes('httpd')) {
-            return 'inactive';
-        }
+
+    // ── set2 task 1: pvcreate /dev/sdc1 (pre-check: pvs — no PVs yet) ────────
+    if (task.id === 1 && command === 'pvs') {
+        return '  PV         VG     Fmt  Attr PSize PFree';
     }
-    
-    // Task 3 Pre-check: httpd not enabled yet
+
+    // ── set2 task 2: vgcreate vg_backup (pre-check: vgs — no VGs yet) ────────
+    if (task.id === 2 && command === 'vgs') {
+        return '  VG     #PV #LV #SN Attr   VSize VFree';
+    }
+
+    // ── task 3 (set1: pvcreate /dev/sdb1 | set2: lvcreate lv_logs) ───────────
     if (task.id === 3) {
-        if (command === 'systemctl' && input.includes('is-enabled') && input.includes('httpd')) {
-            return 'disabled';
+        // set1 pre-checks: pvdisplay/pvs/pvscan for /dev/sdb1 (not a PV yet)
+        if (command === 'pvdisplay' && input.includes('/dev/sdb1')) {
+            return '  Failed to find physical volume "/dev/sdb1".';
+        }
+        if (command === 'pvs' && input.includes('/dev/sdb1')) {
+            return '  Failed to find device "/dev/sdb1".';
+        }
+        if (command === 'pvscan') {
+            return '  No matching physical volumes found';
+        }
+        // set2 pre-check: lvs before lvcreate lv_logs (vg_backup exists, no LVs yet)
+        if (command === 'lvs') {
+            return '  LV     VG     Attr       LSize Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert';
         }
     }
-    
-    // Task 5 Pre-check: default target is graphical
+
+    // ── set2 task 4: lvextend /dev/vg_backup/lv_logs (pre-check: lvs) ────────
+    if (task.id === 4 && command === 'lvs') {
+        return '  LV       VG        Attr       LSize  Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert\n  lv_logs  vg_backup -wi-a-----  1.00g';
+    }
+
+    // ── set1 task 5: vgcreate vg_data (pre-check: vgdisplay/vgs/vgscan) ──────
+    // sdb1 PV exists but vg_data does not yet
     if (task.id === 5) {
-        if (command === 'systemctl' && input.includes('get-default')) {
-            return 'graphical.target';
+        if (command === 'vgdisplay') {
+            return '  Volume group "vg_data" not found\n  Cannot process volume group vg_data';
+        }
+        if (command === 'vgs') {
+            return '  VG     #PV #LV #SN Attr   VSize VFree';
+        }
+        if (command === 'vgscan') {
+            return '  Reading volume groups from cache.\n  No volume groups found.';
         }
     }
-    
-    // Task 7 Pre-check: crond is running
+
+    // ── set1 task 7: lvcreate lv_app (pre-check: lvdisplay/lvs/lvscan) ───────
+    // vg_data exists but lv_app does not yet
     if (task.id === 7) {
-        if (command === 'systemctl' && input.includes('status') && input.includes('crond')) {
-            return '● crond.service - Command Scheduler\n     Loaded: loaded (/usr/lib/systemd/system/crond.service; enabled; vendor preset: enabled)\n     Active: active (running) since Sun 2026-02-23 08:15:42 EST; 4h 15min ago\n       Docs: man:crond(8)\n             man:crontab(5)\n   Main PID: 1145 (crond)\n      Tasks: 1 (limit: 23065)\n     Memory: 1.2M\n        CPU: 12ms\n     CGroup: /system.slice/crond.service\n             └─1145 /usr/sbin/crond -n';
+        if (command === 'lvdisplay') {
+            return '  Failed to find logical volume "vg_data/lv_app".';
         }
-        if (command === 'systemctl' && input.includes('is-active') && input.includes('crond')) {
-            return 'active';
+        if (command === 'lvs') {
+            return '  LV     VG     Attr       LSize Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert';
         }
-    }
-    
-    // Task 11 Pre-check: PID file doesn't exist yet
-    if (task.id === 11) {
-        if ((command === 'cat' || command === 'less' || command === 'more') && 
-            input.includes('/tmp/httpd-pid.txt')) {
-            return `${command}: /tmp/httpd-pid.txt: No such file or directory`;
-        }
-        if (command === 'ls' && input.includes('-l') && input.includes('/tmp/httpd-pid.txt')) {
-            return 'ls: cannot access \'/tmp/httpd-pid.txt\': No such file or directory';
+        if (command === 'lvscan') {
+            return '  No volume groups found';
         }
     }
-    
+
+    // ── set1 task 9: lvextend +500M /dev/vg_data/lv_app (pre-check) ──────────
+    // lv_app exists at 2.00g before extension
+    if (task.id === 9) {
+        if (command === 'lvdisplay') {
+            return '  --- Logical volume ---\n  LV Path                /dev/vg_data/lv_app\n  LV Name                lv_app\n  VG Name                vg_data\n  LV UUID                Lv1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b\n  LV Write Access        read/write\n  LV Status              available\n  # open                 0\n  LV Size                2.00 GiB\n  Current LE             512\n  Block device           253:2';
+        }
+        if (command === 'lvs') {
+            return '  LV       VG      Attr       LSize  Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert\n  lv_app   vg_data -wi-a-----  2.00g';
+        }
+    }
+
     return null;
 }
-/**
- * Section 6 Pre-Check Output (BEFORE state)
- */
+

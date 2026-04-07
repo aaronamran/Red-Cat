@@ -2,25 +2,12 @@ const section4Data = {
     id: 4,
     title: "Shell Scripting",
     description: "Create and manage bash shell scripts",
-    totalPoints: 138,
+    totalPoints: 109,
     questionSets: {
         // Set 1: Bash script basics
         set1: [
             {
                 id: 1,
-                category: "Implementation",
-                description: "Create an empty file called hello.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["hello.sh"] }
-                ],
-                allowedPreChecks: [
-                    { command: "ls", requiredFlags: ["-l"], requiredValues: [] }
-                ],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 2,
                 category: "Implementation",
                 description: "Edit hello.sh: add #!/bin/bash on line 1, then use echo to print 'Hello World'.",
                 expected: [
@@ -40,7 +27,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 3,
+                id: 2,
                 category: "Audit",
                 description: "Make hello.sh executable.",
                 expected: [
@@ -51,7 +38,7 @@ const section4Data = {
                 points: 1
             },
             {
-                id: 4,
+                id: 3,
                 category: "Implementation",
                 description: "Execute the hello.sh script.",
                 expected: [
@@ -65,18 +52,7 @@ const section4Data = {
                 points: 1
             },
             {
-                id: 5,
-                category: "Implementation",
-                description: "Create an empty file called userinfo.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["userinfo.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 6,
+                id: 4,
                 category: "Audit",
                 description: "Edit userinfo.sh: add #!/bin/bash, assign MY_USER=$USER and MY_HOST=$(hostname), then echo both variables.",
                 expected: [
@@ -85,8 +61,8 @@ const section4Data = {
                         requiredValues: ["userinfo.sh"],
                         scriptValidation: {
                             hasBashShebang: true,
-                            hasVariable: ["USER", "HOSTNAME"],
-                            mustContain: ["echo"]
+                            mustContain: ["$USER", "hostname", "echo"],
+                            mustContainAny: ["MY_USER", "MY_HOST"]
                         }
                     }
                 ],
@@ -97,7 +73,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 7,
+                id: 5,
                 category: "Implementation",
                 description: "Display userinfo.sh syntax without executing it.",
                 expected: [
@@ -110,18 +86,7 @@ const section4Data = {
                 points: 1
             },
             {
-                id: 8,
-                category: "Implementation",
-                description: "Create an empty file called args.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["args.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 9,
+                id: 6,
                 category: "Audit",
                 description: "Edit args.sh: add #!/bin/bash, echo $1, $2, and $3 for each positional argument, and echo $# to show the total count.",
                 expected: [
@@ -142,7 +107,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 10,
+                id: 7,
                 category: "Implementation",
                 description: "Test args.sh by running it with 3 arguments, e.g.: ./args.sh one two three",
                 expected: [
@@ -156,18 +121,7 @@ const section4Data = {
                 points: 1
             },
             {
-                id: 11,
-                category: "Implementation",
-                description: "Create an empty file called checkargs.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["checkargs.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 12,
+                id: 8,
                 category: "Audit",
                 description: "Edit checkargs.sh: add #!/bin/bash. If $# -ne 2, echo 'Usage: checkargs.sh arg1 arg2' and exit 1.",
                 expected: [
@@ -178,7 +132,8 @@ const section4Data = {
                             hasBashShebang: true,
                             hasIfStatement: true,
                             hasFiClosing: true,
-                            mustContain: ["$#", "exit"]
+                            mustContain: ["$#", "exit"],
+                            mustContainAny: ["[ $#", "[[ $#", "test $#"]
                         }
                     }
                 ],
@@ -189,18 +144,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 13,
-                category: "Implementation",
-                description: "Create an empty file called documented.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["documented.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 14,
+                id: 9,
                 category: "Implementation",
                 description: "Edit documented.sh: add #!/bin/bash, include at least two # comment lines describing the script's purpose, then add an echo command.",
                 expected: [
@@ -220,7 +164,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 15,
+                id: 10,
                 category: "Audit",
                 description: "Run documented.sh with verbose debugging enabled.",
                 expected: [
@@ -237,17 +181,6 @@ const section4Data = {
             {
                 id: 1,
                 category: "Implementation",
-                description: "Create an empty file called filecheck.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["filecheck.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 2,
-                category: "Implementation",
                 description: "Edit filecheck.sh: add #!/bin/bash. Check if /etc/hosts exists with [ -f ]; echo 'File exists' if true, else echo 'File not found'.",
                 expected: [
                     { 
@@ -258,7 +191,7 @@ const section4Data = {
                             hasIfStatement: true,
                             hasElseStatement: true,
                             hasFiClosing: true,
-                            mustContainAny: ["-f", "-e", "-d", "[[", "test"],
+                            mustContainAny: ["[ -f", "[ -e", "[ -d", "[[ -f", "[[ -e", "[[ -d", "test -f", "test -e", "test -d"],
                             mustContain: ["/etc/hosts", "echo"]
                         }
                     }
@@ -270,7 +203,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 3,
+                id: 2,
                 category: "Audit",
                 description: "Test if /etc/passwd exists using test command.",
                 expected: [
@@ -281,18 +214,7 @@ const section4Data = {
                 points: 1
             },
             {
-                id: 4,
-                category: "Implementation",
-                description: "Create an empty file called ensuredir.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["ensuredir.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 5,
+                id: 3,
                 category: "Implementation",
                 description: "Edit ensuredir.sh: add #!/bin/bash. If /tmp/mydir does not exist (! -d), create it with mkdir -p /tmp/mydir and echo 'Directory created'.",
                 expected: [
@@ -303,7 +225,8 @@ const section4Data = {
                             hasBashShebang: true,
                             hasIfStatement: true,
                             hasFiClosing: true,
-                            mustContain: ["-d", "mkdir", "/tmp/mydir", "echo"]
+                            mustContainAny: ["[ ! -d", "[ -d", "[[ ! -d", "[[ -d", "test ! -d", "test -d"],
+                            mustContain: ["mkdir", "/tmp/mydir", "echo"]
                         }
                     }
                 ],
@@ -314,7 +237,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 6,
+                id: 4,
                 category: "Audit",
                 description: "Test string comparison: check if two variables are equal.",
                 expected: [
@@ -325,7 +248,7 @@ const section4Data = {
                 points: 1
             },
             {
-                id: 7,
+                id: 5,
                 category: "Audit",
                 description: "Test if string is empty or non-empty.",
                 expected: [
@@ -341,17 +264,6 @@ const section4Data = {
         set3: [
             {
                 id: 1,
-                category: "Implementation",
-                description: "Create an empty file called forloop.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["forloop.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 2,
                 category: "Implementation",
                 description: "Edit forloop.sh: add #!/bin/bash. Use for NAME in alice bob charlie; do echo \"Hello, $NAME\"; done to greet each name.",
                 expected: [
@@ -372,18 +284,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 3,
-                category: "Implementation",
-                description: "Create an empty file called readlines.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["readlines.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 4,
+                id: 2,
                 category: "Audit",
                 description: "Edit readlines.sh: add #!/bin/bash. Use: while read LINE; do echo \"$LINE\"; done < /etc/hostname to print each line of the file.",
                 expected: [
@@ -404,18 +305,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 5,
-                category: "Implementation",
-                description: "Create an empty file called processfiles.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["processfiles.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 6,
+                id: 3,
                 category: "Audit",
                 description: "Edit processfiles.sh: add #!/bin/bash. Use for FILE in /etc/*.conf; do echo \"$FILE\"; done to print each config file name.",
                 expected: [
@@ -436,18 +326,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 7,
-                category: "Implementation",
-                description: "Create an empty file called count.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["count.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 8,
+                id: 4,
                 category: "Implementation",
                 description: "Edit count.sh: add #!/bin/bash. Use for ((i=1; i<=10; i++)); do echo \"$i\"; done to count and print numbers 1 through 10.",
                 expected: [
@@ -468,18 +347,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 9,
-                category: "Implementation",
-                description: "Create an empty file called infinite.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["infinite.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 10,
+                id: 5,
                 category: "Implementation",
                 description: "Edit infinite.sh: add #!/bin/bash. Use while true; do echo 'Running...'; sleep 5; done to loop indefinitely.",
                 expected: [
@@ -500,18 +368,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 11,
-                category: "Audit",
-                description: "Create an empty file called waitfile.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["waitfile.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 12,
+                id: 6,
                 category: "Audit",
                 description: "Edit waitfile.sh: add #!/bin/bash. Use until [ -f /tmp/flag ]; do sleep 2; done, then echo 'Flag found!' once the file appears.",
                 expected: [
@@ -520,6 +377,7 @@ const section4Data = {
                         requiredValues: ["waitfile.sh"],
                         scriptValidation: {
                             hasBashShebang: true,
+                            mustContainAny: ["[ -f", "[[ -f", "test -f"],
                             mustContain: ["until", "/tmp/flag", "sleep", "echo"]
                         }
                     }
@@ -531,29 +389,19 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 13,
+                id: 7,
                 category: "Implementation",
-                description: "Create an empty file called breakloop.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["breakloop.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 14,
-                category: "Implementation",
-                description: "Edit breakloop.sh: add #!/bin/bash. Use for i in 1 2 3 4 5; for each iteration, if [ $i -eq 3 ]; then echo 'Breaking at 3'; break; fi; done.",
+                description: "Edit breakloop.sh: add #!/bin/bash. Use for i in 1 2 3 4 5; do if [ $i -eq 3 ]; then echo 'Breaking at 3'; break; fi; done.",
                 expected: [
                     { 
                         command: "vi", 
                         requiredValues: ["breakloop.sh"],
                         scriptValidation: {
                             hasBashShebang: true,
+                            hasForLoop: true,
                             hasIfStatement: true,
-                            mustContain: ["break", "echo"],
-                            matchesPattern: { "\\$\\w+": 1 }
+                            hasFiClosing: true,
+                            mustContain: ["do", "then", "$i", "break", "echo", "[ ", " ]"]
                         }
                     }
                 ],
@@ -564,29 +412,19 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 15,
+                id: 8,
                 category: "Audit",
-                description: "Create an empty file called continueloop.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["continueloop.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 16,
-                category: "Audit",
-                description: "Edit continueloop.sh: add #!/bin/bash. Use for i in 1 2 3 4 5; if [ $((i%2)) -eq 0 ]; then continue; fi; echo \"$i\"; done to skip even numbers.",
+                description: "Edit continueloop.sh: add #!/bin/bash. Use for i in 1 2 3 4 5; do if [ $((i%2)) -eq 0 ]; then continue; fi; echo \"$i\"; done to skip even numbers.",
                 expected: [
                     { 
                         command: "vi", 
                         requiredValues: ["continueloop.sh"],
                         scriptValidation: {
                             hasBashShebang: true,
+                            hasForLoop: true,
                             hasIfStatement: true,
-                            mustContain: ["continue", "echo"],
-                            matchesPattern: { "\\$\\w+": 1 }
+                            hasFiClosing: true,
+                            mustContain: ["do", "then", "$i", "continue", "echo", "[ ", " ]"]
                         }
                     }
                 ],
@@ -597,18 +435,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 17,
-                category: "Implementation",
-                description: "Create an empty file called nested.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["nested.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 18,
+                id: 9,
                 category: "Implementation",
                 description: "Edit nested.sh: add #!/bin/bash. for i in 1 2 3; do for j in A B C; do echo \"$i $j\"; done; done to print all pairs like '1 A', '1 B'.",
                 expected: [
@@ -630,18 +457,7 @@ const section4Data = {
                 points: 3
             },
             {
-                id: 19,
-                category: "Audit",
-                description: "Create an empty file called loopargs.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["loopargs.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 20,
+                id: 10,
                 category: "Audit",
                 description: "Edit loopargs.sh: add #!/bin/bash. Use for arg in \"$@\"; do echo \"Arg: $arg\"; done to print each argument passed to the script.",
                 expected: [
@@ -668,17 +484,6 @@ const section4Data = {
             {
                 id: 1,
                 category: "Implementation",
-                description: "Create an empty file called functions.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["functions.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 2,
-                category: "Implementation",
                 description: "Edit functions.sh: add #!/bin/bash. Define greet() { echo 'Hello from function'; } and call it by name at the end.",
                 expected: [
                     { 
@@ -698,18 +503,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 3,
-                category: "Audit",
-                description: "Create an empty file called funcparams.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["funcparams.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 4,
+                id: 2,
                 category: "Audit",
                 description: "Edit funcparams.sh: add #!/bin/bash. Define greet() that echoes 'Hello, $1'. Call it with: greet 'World'.",
                 expected: [
@@ -730,18 +524,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 5,
-                category: "Implementation",
-                description: "Create an empty file called returnvalue.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["returnvalue.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 6,
+                id: 3,
                 category: "Implementation",
                 description: "Edit returnvalue.sh: add #!/bin/bash. Define check() that returns 0 on success or 1 on failure. Echo $? after calling it to see the exit code.",
                 expected: [
@@ -762,18 +545,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 7,
-                category: "Audit",
-                description: "Create an empty file called echovalue.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["echovalue.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 8,
+                id: 4,
                 category: "Audit",
                 description: "Edit echovalue.sh: add #!/bin/bash. Define get_date() that echoes $(date). Capture it: result=$(get_date), then echo $result.",
                 expected: [
@@ -794,7 +566,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 9,
+                id: 5,
                 category: "Implementation",
                 description: "Check exit code of last command.",
                 expected: [
@@ -805,18 +577,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 10,
-                category: "Audit",
-                description: "Create an empty file called exitcodes.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["exitcodes.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 11,
+                id: 6,
                 category: "Audit",
                 description: "Edit exitcodes.sh: add #!/bin/bash. Echo 'Script starting', then exit 2 to signal an error condition.",
                 expected: [
@@ -836,18 +597,7 @@ const section4Data = {
                 points: 1
             },
             {
-                id: 12,
-                category: "Implementation",
-                description: "Create an empty file called localvars.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["localvars.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 13,
+                id: 7,
                 category: "Implementation",
                 description: "Edit localvars.sh: add #!/bin/bash. Define test_scope() with local MY_VAR='hello'; echo $MY_VAR inside the function, then call it.",
                 expected: [
@@ -868,18 +618,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 14,
-                category: "Audit",
-                description: "Create an empty file called sete.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["sete.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 15,
+                id: 8,
                 category: "Audit",
                 description: "Edit sete.sh: add #!/bin/bash and set -e near the top. Echo 'Start', then include a command that will fail (e.g. ls /no/such/dir) to trigger automatic exit.",
                 expected: [
@@ -899,18 +638,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 16,
-                category: "Implementation",
-                description: "Create an empty file called setu.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["setu.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 17,
+                id: 9,
                 category: "Implementation",
                 description: "Edit setu.sh: add #!/bin/bash and set -u near the top. Then echo $UNDEFINED_VAR to deliberately trigger an unset variable error.",
                 expected: [
@@ -930,18 +658,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 18,
-                category: "Audit",
-                description: "Create an empty file called trap.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["trap.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 19,
+                id: 10,
                 category: "Audit",
                 description: "Edit trap.sh: add #!/bin/bash. Use trap 'echo Cleaning up...' EXIT so the cleanup message prints automatically when the script finishes.",
                 expected: [
@@ -967,17 +684,6 @@ const section4Data = {
             {
                 id: 1,
                 category: "Implementation",
-                description: "Create an empty file called readinput.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["readinput.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 2,
-                category: "Implementation",
                 description: "Edit readinput.sh: add #!/bin/bash. Use read -p 'Enter your name: ' NAME and then echo \"Hello, $NAME\".",
                 expected: [
                     { 
@@ -996,7 +702,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 3,
+                id: 2,
                 category: "Audit",
                 description: "Read input without echoing (for passwords).",
                 expected: [
@@ -1007,18 +713,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 4,
-                category: "Implementation",
-                description: "Create an empty file called timeout.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["timeout.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 5,
+                id: 3,
                 category: "Implementation",
                 description: "Edit timeout.sh: add #!/bin/bash. Use read -t 5 -p 'Enter input: ' REPLY; if REPLY is empty, echo 'Timed out'.",
                 expected: [
@@ -1038,7 +733,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 6,
+                id: 4,
                 category: "Audit",
                 description: "Redirect stdout to file.",
                 expected: [
@@ -1049,7 +744,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 7,
+                id: 5,
                 category: "Implementation",
                 description: "Redirect stderr to file separately from stdout.",
                 expected: [
@@ -1060,7 +755,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 8,
+                id: 6,
                 category: "Audit",
                 description: "Redirect both stdout and stderr to same file.",
                 expected: [
@@ -1072,7 +767,7 @@ const section4Data = {
                 points: 3
             },
             {
-                id: 9,
+                id: 7,
                 category: "Implementation",
                 description: "Discard output by redirecting to /dev/null.",
                 expected: [
@@ -1083,7 +778,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 10,
+                id: 8,
                 category: "Audit",
                 description: "Use here document to provide multi-line input.",
                 expected: [
@@ -1094,7 +789,7 @@ const section4Data = {
                 points: 3
             },
             {
-                id: 11,
+                id: 9,
                 category: "Implementation",
                 description: "Use here string to provide single-line input.",
                 expected: [
@@ -1105,18 +800,7 @@ const section4Data = {
                 points: 2
             },
             {
-                id: 12,
-                category: "Audit",
-                description: "Create an empty file called logging.sh",
-                expected: [
-                    { command: "touch", requiredValues: ["logging.sh"] }
-                ],
-                allowedPreChecks: [],
-                explanation: "Use touch to create an empty file.",
-                points: 1
-            },
-            {
-                id: 13,
+                id: 10,
                 category: "Audit",
                 description: "Edit logging.sh: add #!/bin/bash. Run df -h and pipe through tee /tmp/disk.log to display output on screen and save it to a file.",
                 expected: [

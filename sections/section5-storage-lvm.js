@@ -144,7 +144,6 @@ const section5Data = {
             }
         ],
         set2: [
-            // Placeholder for set2 - different scenarios
             {
                 id: 1,
                 category: "Implementation",
@@ -187,12 +186,9 @@ const section5Data = {
                 ],
                 explanation: "Logical Volumes are created from free space in Volume Groups.",
                 points: 4
-            }
-        ],
-        set3: [
-            // Placeholder for set3
+            },
             {
-                id: 1,
+                id: 4,
                 category: "Implementation",
                 description: "Extend Logical Volume /dev/vg_backup/lv_logs by 300MB with filesystem resize.",
                 expected: {

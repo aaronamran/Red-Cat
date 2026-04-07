@@ -163,8 +163,22 @@ const LandingPage = {
         card.className = 'chapter-card';
         card.dataset.sectionId = section.id;
 
-        // Calculate task count from first question set (all sets have same count)
-        const taskCount = section.questionSets && section.questionSets.set1 ? section.questionSets.set1.length : 0;
+        // Compute stats across all available question sets
+        let totalTaskCount = 0;
+        let totalPointsSum = 0;
+        let setCount = 0;
+        if (section.questionSets) {
+            for (let i = 1; i <= 6; i++) {
+                const set = section.questionSets[`set${i}`];
+                if (set) {
+                    totalTaskCount += set.length;
+                    totalPointsSum += set.reduce((sum, t) => sum + (t.points || 0), 0);
+                    setCount++;
+                }
+            }
+        }
+        const avgTaskCount = setCount > 0 ? Math.round(totalTaskCount / setCount) : 0;
+        const avgPoints = setCount > 0 ? Math.round(totalPointsSum / setCount) : 0;
 
         card.innerHTML = `
             <div class="chapter-number">Section ${section.id}</div>
@@ -172,10 +186,10 @@ const LandingPage = {
             <div class="chapter-description">${section.description}</div>
             <div class="chapter-stats">
                 <div class="chapter-stat">
-                    <strong>${taskCount}</strong> Tasks
+                    <strong>${avgTaskCount}</strong> Tasks
                 </div>
                 <div class="chapter-stat">
-                    <strong>${section.totalPoints || 0}</strong> Points
+                    <strong>${avgPoints}</strong> Points
                 </div>
             </div>
         `;
