@@ -44,7 +44,8 @@ const sections = [
     section14Data, // Task Scheduling
     section15Data, // Boot Process & Maintenance
     section16Data, // Rootless Containers
-    section17Data  // Time Services
+    section17Data, // Time Services
+    section18Data  // Flatpak
 ];
 
 /**

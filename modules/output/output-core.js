@@ -167,6 +167,8 @@ function generateSimulatedOutput(task, input, grepParsed) {
         return generateSection16Output(command, input, tokens);
     } else if (sectionId === 17) {
         return generateSection17Output(command, input, tokens);
+    } else if (sectionId === 18) {
+        return generateSection18Output(input, tokens);
     }
     
     return null;
@@ -204,6 +206,8 @@ function generatePreCheckOutput(task, input, grepParsed) {
         return generateSection9PreCheck(task, command, input, tokens);
     } else if (section.id === 10) {
         return generateSection10PreCheck(task, command, input, tokens);
+    } else if (section.id === 18) {
+        return generateSection18PreCheck(input, tokens);
     }
     
     return null;

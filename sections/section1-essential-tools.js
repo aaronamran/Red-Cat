@@ -246,13 +246,13 @@ const section1Data = {
                 category: "Implementation",
                 description: "Count the number of running processes and save to /tmp/process-count.txt",
                 expected: [
-                    { command: "ps", requiredFlags: ["aux"], requiredValues: ["|", "wc", "-l", ">", "/tmp/process-count.txt"] },
+                    { command: "ps", requiredValues: ["aux", "|", "wc", "-l", ">", "/tmp/process-count.txt"] },
                     { command: "ps", requiredFlags: ["-e", "-f"], requiredValues: ["|", "wc", "-l", ">", "/tmp/process-count.txt"] }
                 ],
                 allowedPreChecks: [
                     { command: "cat", requiredValues: ["/tmp/process-count.txt"] }
                 ],
-                explanation: "Pipe ps output to wc -l to count running processes.",
+                explanation: "Pipe ps output to wc -l to count running processes. Use 'ps aux' (BSD style) or 'ps -ef' (UNIX style).",
                 points: 3
             },
             {
