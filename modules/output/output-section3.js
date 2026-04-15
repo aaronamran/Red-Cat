@@ -1,336 +1,422 @@
-/** Red Cat - Section 3 */
+/** Red Cat - Section 3: Permissions & ACLs */
 
 function generateSection3Output(command, input, tokens) {
-    // Handle ls commands
+    // Get current filesystem state
+    const fsState = typeof getFileSystemState === 'function' ? getFileSystemState() : {};
+    
+    // Handle ls commands with dynamic state
     if (command === 'ls') {
-        if (hasFlags(input, 'ld') && input.includes('/mnt/backup')) {
-            return 'drwxr-xr-x 2 root root 4096 Jan 20 10:00 /mnt/backup';
+        // Handle ls -ld for specific paths (dynamic based on state)
+        if (hasFlags(input, 'ld')) {
+            // Extract path from command
+            const pathMatch = input.match(/\/[^\s]+/);
+            const path = pathMatch ? pathMatch[0] : null;
+            
+            if (path && fsState[path] && typeof generateLsOutput === 'function') {
+                return generateLsOutput(path, fsState[path], true);
+            }
+            
+            // Fallback to static output for paths not in state
+            if (input.includes('/opt/webapp')) {
+                const state = fsState['/opt/webapp'] || { mode: '0755', owner: 'root', group: 'root', acls: [] };
+                return typeof generateLsOutput === 'function' 
+                    ? generateLsOutput('/opt/webapp', state, true)
+                    : 'drwxr-xr-x 2 root root 4096 Jan 20 12:00 /opt/webapp';
+            }
+            if (input.includes('/var/backup')) {
+                const state = fsState['/var/backup'] || { mode: '0755', owner: 'root', group: 'root', acls: [] };
+                return typeof generateLsOutput === 'function'
+                    ? generateLsOutput('/var/backup', state, true)
+                    : 'drwxr-xr-x 2 root backup 4096 Jan 20 11:30 /var/backup';
+            }
+            if (input.includes('/shared/projects')) {
+                const state = fsState['/shared/projects'] || { mode: '0755', owner: 'root', group: 'root', acls: [] };
+                return typeof generateLsOutput === 'function'
+                    ? generateLsOutput('/shared/projects', state, true)
+                    : 'drwxr-sr-x 2 root developers 4096 Jan 20 09:30 /shared/projects';
+            }
+            if (input.includes('/data/reports')) {
+                const state = fsState['/data/reports'] || { mode: '0755', owner: 'root', group: 'root', acls: [] };
+                return typeof generateLsOutput === 'function'
+                    ? generateLsOutput('/data/reports', state, true)
+                    : 'drwxr-xr-x+ 2 root managers 4096 Jan 20 14:00 /data/reports';
+            }
+            if (input.includes('/opt/data')) {
+                const state = fsState['/opt/data'] || { mode: '0750', owner: 'root', group: 'root', acls: [] };
+                return typeof generateLsOutput === 'function'
+                    ? generateLsOutput('/opt/data', state, true)
+                    : 'drwxr-x---+ 2 alice sysops 4096 Jan 20 12:00 /opt/data';
+            }
         }
-        if (hasFlags(input, 'ld') && input.includes('/media/usb')) {
-            return 'drwxr-xr-x 2 root root 4096 Jan 20 10:00 /media/usb';
+        // ls -la: show directory contents (all files including hidden)
+        if (hasFlags(input, 'la') && !hasFlags(input, 'd')) {
+            if (input.includes('/opt/webapp')) {
+                return 'total 20\ndrwxr-xr-x+  2 webuser developers 4096 Jan 20 12:00 .\ndrwxr-xr-x  15 root    root       4096 Jan 20 09:00 ..\n-rw-r--r--   1 webuser developers 2048 Jan 20 12:00 index.html\n-rw-r--r--   1 webuser developers 4096 Jan 20 12:00 app.php\n-rw-r--r--   1 webuser developers 1024 Jan 20 12:00 style.css';
+            }
+            if (input.includes('/var/backup')) {
+                return 'total 12\ndrwxr-xr-x  2 root backup 4096 Jan 20 11:30 .\ndrwxr-xr-x 17 root root   4096 Jan 20 09:00 ..\n-rw-r--r--  1 root backup 1024 Jan 20 11:30 readme.txt';
+            }
+            if (input.includes('/shared/projects')) {
+                return 'total 16\ndrwxr-sr-x+  2 root developers 4096 Jan 20 09:30 .\ndrwxr-xr-x  17 root root       4096 Jan 20 09:00 ..\ndrwxr-sr-x   2 root developers 4096 Jan 20 09:30 web-project\ndrwxr-sr-x   2 root developers 4096 Jan 20 09:30 db-schema';
+            }
+            if (input.includes('/data/reports')) {
+                return 'total 16\ndrwxr-xr-x+  2 root managers 4096 Jan 20 14:00 .\ndrwxr-xr-x  17 root root     4096 Jan 20 09:00 ..\n-rw-r--r--   1 root managers 2048 Jan 20 14:00 q1-report.pdf\n-rw-r--r--   1 root managers 1024 Jan 20 14:00 summary.txt';
+            }
+            if (input.includes('/tmp/shared')) {
+                return 'total 16\ndrwxrwxrwt  2 root root 4096 Jan 20 15:00 .\ndrwxrwxrwt 17 root root 4096 Jan 20 09:00 ..\n-rw-r--r--  1 root root 1024 Jan 20 14:30 shared-data.txt';
+            }
+            if (input.includes('/shared/docs')) {
+                return 'total 16\ndrwxr-xr-x+  2 root root 4096 Jan 20 13:00 .\ndrwxr-xr-x  17 root root 4096 Jan 20 09:00 ..\n-rw-r--r--   1 root root 1024 Jan 20 13:00 overview.md\n-rw-r--r--   1 root root 2048 Jan 20 13:00 guide.pdf';
+            }
+            if (input.includes('/srv/files')) {
+                return 'total 16\ndrwxr-xr-x  2 root root 4096 Jan 20 10:00 .\ndrwxr-xr-x 17 root root 4096 Jan 20 09:00 ..\n-rw-r--r--  1 root root 1024 Jan 20 10:00 file1.txt\n-rw-r--r--  1 root root 2048 Jan 20 10:01 file2.txt';
+            }
+            if (input.includes('/opt/myapp')) {
+                return 'total 16\ndrwxr-xr-x  4 appuser appsvc 4096 Jan 20 11:00 .\ndrwxr-xr-x 17 root    root   4096 Jan 20 09:00 ..\ndrwxr-xr-x  2 appuser appsvc 4096 Jan 20 11:00 bin\ndrwxr-xr-x  2 appuser appsvc 4096 Jan 20 11:00 config';
+            }
+            if (input.includes('/opt/app')) {
+                return 'total 16\ndrwxr-x---  4 root root 4096 Jan 20 14:00 .\ndrwxr-xr-x 17 root root 4096 Jan 20 09:00 ..\ndrwxr-x---  2 root root 4096 Jan 20 14:00 bin\ndrwxr-x---  2 root root 4096 Jan 20 14:00 config';
+            }
+            if (input.includes('/data/project')) {
+                return 'total 12\ndrwxr-xr-x  3 developer devteam 4096 Jan 20 14:00 .\ndrwxr-xr-x 17 root      root    4096 Jan 20 09:00 ..\ndrwxr-xr-x  2 developer devteam 4096 Jan 20 14:00 src\n-rw-r--r--  1 developer devteam 2048 Jan 20 14:00 README.md';
+            }
+            if (input.includes('/opt/data')) {
+                return 'total 12\ndrwxr-x---+ 2 alice  sysops 4096 Jan 20 12:00 .\ndrwxr-xr-x 17 root   root   4096 Jan 20 09:00 ..\n-rw-r-----  1 alice  sysops 4096 Jan 20 10:00 report.txt';
+            }
+            if (input.includes('/var/logs')) {
+                return 'total 12\ndrwxr-xr-x  2 root loggroup 4096 Jan 20 11:30 .\ndrwxr-xr-x 17 root root     4096 Jan 20 09:00 ..\n-rw-r-----  1 root loggroup 4096 Jan 20 11:30 app.log';
+            }
         }
-        if (hasFlags(input, 'ld') && input.includes('/mnt/external')) {
-            return 'drwxr-xr-x 2 root root 4096 Jan 20 10:00 /mnt/external';
+
+        // Set 1 paths
+        if (hasFlags(input, 'ld') && input.includes('/opt/webapp')) {
+            return 'drwxr-xr-x 2 webuser developers 4096 Jan 20 12:00 /opt/webapp';
         }
-        if (input.includes('/mnt') && !input.includes('/mnt/backup')) {
-            return 'backup';
+        if (hasFlags(input, 'ld') && input.includes('/var/backup')) {
+            return 'drwxr-xr-x 2 root backup 4096 Jan 20 11:30 /var/backup';
         }
-        if (input.includes('/media')) {
-            return 'usb';
+        
+        // Set 2 paths
+        if ((input.includes('-l') || hasFlags(input, 'ld')) && input.includes('/etc/appconfig')) {
+            return '-rw-r----- 1 root appgroup 2048 Jan 20 10:00 /etc/appconfig';
         }
-        if (hasFlags(input, 'lh') && input.includes('httpd-backup.tar.gz')) {
-            return '-rw-r--r-- 1 root root 2.4K Jan 20 14:30 /tmp/httpd-backup.tar.gz';
+        if (hasFlags(input, 'ld') && input.includes('/shared/projects')) {
+            return 'drwxr-sr-x 2 root developers 4096 Jan 20 09:30 /shared/projects';
         }
-        if (input.includes('httpd-backup.tar.gz') && !hasFlags(input, 'l')) {
-            return '/tmp/httpd-backup.tar.gz';
+        if (hasFlags(input, 'ld') && input.includes('/data/reports')) {
+            return 'drwxr-xr-x+ 2 root managers 4096 Jan 20 14:00 /data/reports';
         }
-        if (hasFlags(input, 'lh') && input.includes('logs-backup.tar.bz2')) {
-            return '-rw-r--r-- 1 root root 8.5K Jan 20 14:45 logs-backup.tar.bz2';
+        if (hasFlags(input, 'ld') && input.includes('/tmp/shared')) {
+            return 'drwxrwxrwt 2 root root 4096 Jan 20 15:00 /tmp/shared';
         }
-        if (input.includes('logs-backup.tar.bz2') && !hasFlags(input, 'l')) {
-            return 'logs-backup.tar.bz2';
+        
+        // Set 3 paths
+        if (input.includes('-l') && input.includes('/srv/files')) {
+            if (input.includes('-R')) {
+                return '/srv/files:\ntotal 8\n-rw-r--r-- 1 root root 1024 Jan 20 10:00 file1.txt\n-rw-r--r-- 1 root root 2048 Jan 20 10:01 file2.txt';
+            }
+            return 'total 8\n-rw-r--r-- 1 root root 1024 Jan 20 10:00 file1.txt\n-rw-r--r-- 1 root root 2048 Jan 20 10:01 file2.txt';
         }
-        if (hasFlags(input, 'lh') && input.includes('data-backup.tar.gz')) {
-            return '-rw-r--r-- 1 root root 245K Jan 20 14:30 data-backup.tar.gz';
+        if (input.includes('-l') && input.includes('/opt/myapp')) {
+            if (input.includes('-R')) {
+                return '/opt/myapp:\ntotal 4\ndrwxr-xr-x 2 appuser appsvc 4096 Jan 20 11:00 bin\ndrwxr-xr-x 2 appuser appsvc 4096 Jan 20 11:00 config\n\n/opt/myapp/bin:\ntotal 8\n-rwxr-xr-x 1 appuser appsvc 4096 Jan 20 11:00 app';
+            }
+            return 'drwxr-xr-x 4 appuser appsvc 4096 Jan 20 11:00 /opt/myapp';
         }
-        if (input.includes('data-backup.tar.gz') && !hasFlags(input, 'lh')) {
-            return 'data-backup.tar.gz';
+        if (input.includes('-l') && input.includes('/test/file')) {
+            return '-rw-r--r-- 1 root root 512 Jan 20 12:30 /test/file';
         }
-        if (hasFlags(input, 'lR') && input.includes('/backup/databases')) {
-            return '/backup/databases:\ntotal 12\ndrwxr-xr-x 2 root root 4096 Jan 20 10:00 mysql\ndrwxr-xr-x 2 root root 4096 Jan 20 10:00 postgres\n\n/backup/databases/mysql:\ntotal 8\n-rw-r--r-- 1 root root 1234 Jan 20 10:00 backup.sql\n\n/backup/databases/postgres:\ntotal 8\n-rw-r--r-- 1 root root 2345 Jan 20 10:00 dump.sql';
+        
+        // Set 4 paths (hard and symbolic links)
+        if (hasFlags(input, 'li') && input.includes('/opt/data/report.txt')) {
+            return '1234567 -rw-r--r-- 2 root root 4096 Jan 20 10:00 /opt/data/report.txt';
         }
-        if (hasFlags(input, 'ld') && input.includes('/backup/databases/mysql')) {
-            return 'drwxr-xr-x 2 root root 4096 Jan 20 10:00 /backup/databases/mysql';
+        if (hasFlags(input, 'li') && input.includes('/tmp/report-link')) {
+            return '1234567 -rw-r--r-- 2 root root 4096 Jan 20 10:00 /tmp/report-link';
         }
-        if (hasFlags(input, 'ld') && input.includes('/backup/databases')) {
-            return 'drwxr-xr-x 3 root root 4096 Jan 20 10:00 /backup/databases';
+        if (input.includes('-l') && input.includes('/home/user/docs')) {
+            return 'lrwxrwxrwx 1 user user 21 Jan 20 10:30 /home/user/docs -> /mnt/shared/documents';
         }
-        if (input.includes('/backup') && hasFlags(input, 'lR')) {
-            return '/backup:\ntotal 4\ndrwxr-xr-x 3 root root 4096 Jan 20 10:00 databases\n\n/backup/databases:\ntotal 8\ndrwxr-xr-x 2 root root 4096 Jan 20 10:00 mysql\ndrwxr-xr-x 2 root root 4096 Jan 20 10:00 postgres\n\n/backup/databases/mysql:\ntotal 8\n-rw-r--r-- 1 root root 1234 Jan 20 10:00 backup.sql\n\n/backup/databases/postgres:\ntotal 8\n-rw-r--r-- 1 root root 2345 Jan 20 10:00 dump.sql';
+        if (hasFlags(input, 'li') && input.includes('/etc/app/config.conf')) {
+            return '7654321 -rw-r--r-- 2 root root 1024 Jan 20 11:00 /etc/app/config.conf';
         }
-        if (hasFlags(input, 'lR') && input.includes('/restore')) {
-            return '/restore:\ntotal 4\ndrwxr-xr-x 3 root root 4096 Jan 20 15:00 etc\n\n/restore/etc:\ntotal 4\ndrwxr-xr-x 3 root root 4096 Jan 20 15:00 httpd\n\n/restore/etc/httpd:\ntotal 8\ndrwxr-xr-x 2 root root 4096 Jan 20 15:00 conf\ndrwxr-xr-x 2 root root 4096 Jan 20 15:00 conf.d';
+        if (hasFlags(input, 'li') && input.includes('/backup/config.conf')) {
+            return '7654321 -rw-r--r-- 2 root root 1024 Jan 20 11:00 /backup/config.conf';
         }
-        if (hasFlags(input, 'l') && input.includes('/restore/etc/httpd')) {
-            return 'total 8\ndrwxr-xr-x 2 root root 4096 Jan 20 15:00 conf\ndrwxr-xr-x 2 root root 4096 Jan 20 15:00 conf.d';
+        if (input.includes('-l') && input.includes('/usr/local/bin/python')) {
+            return 'lrwxrwxrwx 1 root root 16 Jan 20 12:00 /usr/local/bin/python -> /usr/bin/python3';
         }
-        if (input.includes('/restore/etc/httpd')) {
-            return 'conf  conf.d';
+        
+        // Set 5 paths
+        if (input.includes('-l') && input.includes('/tmp/umask-test.txt')) {
+            return '-rw-r----- 1 root root 0 Jan 20 13:00 /tmp/umask-test.txt';
         }
-        if (input.includes('/restore/etc')) {
-            return 'httpd';
+        
+        // Systemd default target symlink
+        if (input.includes('-l') && input.includes('/etc/systemd/system/default.target')) {
+            return 'lrwxrwxrwx 1 root root 41 Jan 20 08:00 /etc/systemd/system/default.target -> /usr/lib/systemd/system/multi-user.target';
+        }
+        
+        // Set 6 paths
+        if (hasFlags(input, 'lR') && input.includes('/data/project')) {
+            return '/data/project:\ntotal 8\ndrwxr-xr-x 2 developer devteam 4096 Jan 20 14:00 src\n-rw-r--r-- 1 developer devteam 2048 Jan 20 14:00 README.md\n\n/data/project/src:\ntotal 4\n-rw-r--r-- 1 developer devteam 1024 Jan 20 14:00 main.c';
+        }
+        
+        // Original paths
+        if (hasFlags(input, 'ld') && input.includes('/opt/data')) {
+            const state = fsState['/opt/data'] || { mode: '0750', owner: 'alice', group: 'sysops', acls: 'user:bob:rw-' };
+            return typeof generateLsOutput === 'function'
+                ? generateLsOutput('/opt/data', state, true)
+                : 'drwxr-x---+ 2 alice sysops 4096 Jan 20 12:00 /opt/data';
+        }
+        if (hasFlags(input, 'ld') && input.includes('/var/logs')) {
+            const state = fsState['/var/logs'] || { mode: '0755', owner: 'root', group: 'loggroup' };
+            return typeof generateLsOutput === 'function'
+                ? generateLsOutput('/var/logs', state, true)
+                : 'drwxr-xr-x 2 root loggroup 4096 Jan 20 11:30 /var/logs';
+        }
+        // Set 6 paths (missing entries)
+        if (hasFlags(input, 'ld') && input.includes('/shared/docs')) {
+            const state = fsState['/shared/docs'] || { mode: '0755', owner: 'root', group: 'root', acls: 'default:group:editors:rw-' };
+            return typeof generateLsOutput === 'function'
+                ? generateLsOutput('/shared/docs', state, true)
+                : 'drwxr-xr-x+ 2 root root 4096 Jan 20 13:00 /shared/docs';
+        }
+        if (hasFlags(input, 'ld') && input.includes('/opt/app')) {
+            const state = fsState['/opt/app'] || { mode: '0750', owner: 'root', group: 'root' };
+            return typeof generateLsOutput === 'function'
+                ? generateLsOutput('/opt/app', state, true)
+                : 'drwxr-x--- 4 root root 4096 Jan 20 14:00 /opt/app';
         }
     }
     
-    // Handle df commands
-    if (command === 'df') {
-        if (input.includes('/mnt/backup')) {
-            return 'Filesystem     1K-blocks    Used Available Use% Mounted on\n/dev/sdb1       10485760 2097152   8388608  20% /mnt/backup';
+    // Handle stat commands with dynamic state
+    if (command === 'stat') {
+        // Extract path from command
+        const pathMatch = input.match(/\/[^\s]+/);
+        const path = pathMatch ? pathMatch[0] : null;
+        
+        if (path && fsState[path] && typeof generateStatOutput === 'function') {
+            return generateStatOutput(path, fsState[path], true);
         }
-        if (input.includes('/mnt/external')) {
-            return 'Filesystem     1K-blocks    Used Available Use% Mounted on\n/dev/sdb1       10485760 2097152   8388608  20% /mnt/external';
+        
+        // Fallback to static output
+        if (input.includes('/opt/webapp')) {
+            const state = fsState['/opt/webapp'] || { mode: '0755', owner: 'webuser', group: 'developers' };
+            return typeof generateStatOutput === 'function'
+                ? generateStatOutput('/opt/webapp', state, true)
+                : '  File: /opt/webapp\n  Size: 4096      \tBlocks: 8          IO Block: 4096   directory\nDevice: fd00h/64768d\tInode: 12345      Links: 2\nAccess: (0755/drwxr-xr-x)  Uid: ( 1001/webuser)   Gid: ( 2001/developers)\nAccess: 2026-01-20 12:00:00.000000000 -0500\nModify: 2026-01-20 12:00:00.000000000 -0500\nChange: 2026-01-20 12:00:00.000000000 -0500\n Birth: -';
         }
-        if (input.includes('/media/usb')) {
-            return 'Filesystem     1K-blocks    Used Available Use% Mounted on\n/dev/sdc1        5242880 1048576   4194304  20% /media/usb';
+        if (input.includes('/etc/appconfig')) {
+            const state1 = fsState['/etc/appconfig'] || { mode: '0640', owner: 'root', group: 'appgroup' };
+            return typeof generateStatOutput === 'function'
+                ? generateStatOutput('/etc/appconfig', state1, false)
+                : '  File: /etc/appconfig\n  Size: 2048      \tBlocks: 4          IO Block: 4096   regular file\nDevice: fd00h/64768d\tInode: 23456      Links: 1\nAccess: (0640/-rw-r-----)  Uid: (    0/    root)   Gid: ( 3001/appgroup)\nAccess: 2026-01-20 10:00:00.000000000 -0500\nModify: 2026-01-20 10:00:00.000000000 -0500\nChange: 2026-01-20 10:00:00.000000000 -0500\n Birth: -';
+        }
+        if (input.includes('/shared/projects')) {
+            const state2 = fsState['/shared/projects'] || { mode: '2755', owner: 'root', group: 'developers' };
+            return typeof generateStatOutput === 'function'
+                ? generateStatOutput('/shared/projects', state2, true)
+                : '  File: /shared/projects\n  Size: 4096      \tBlocks: 8          IO Block: 4096   directory\nDevice: fd00h/64768d\tInode: 34567      Links: 2\nAccess: (2755/drwxr-sr-x)  Uid: (    0/    root)   Gid: ( 2001/developers)\nAccess: 2026-01-20 09:30:00.000000000 -0500\nModify: 2026-01-20 09:30:00.000000000 -0500\nChange: 2026-01-20 09:30:00.000000000 -0500\n Birth: -';
+        }
+        if (input.includes('/tmp/shared')) {
+            const state3 = fsState['/tmp/shared'] || { mode: '1777', owner: 'root', group: 'root' };
+            return typeof generateStatOutput === 'function'
+                ? generateStatOutput('/tmp/shared', state3, true)
+                : '  File: /tmp/shared\n  Size: 4096      \tBlocks: 8          IO Block: 4096   directory\nDevice: fd00h/64768d\tInode: 45678      Links: 2\nAccess: (1777/drwxrwxrwt)  Uid: (    0/    root)   Gid: (    0/    root)\nAccess: 2026-01-20 15:00:00.000000000 -0500\nModify: 2026-01-20 15:00:00.000000000 -0500\nChange: 2026-01-20 15:00:00.000000000 -0500\n Birth: -';
+        }
+        if (input.includes('/data/reports')) {
+            const state4 = fsState['/data/reports'] || { mode: '0755', owner: 'root', group: 'managers' };
+            return typeof generateStatOutput === 'function'
+                ? generateStatOutput('/data/reports', state4, true)
+                : '  File: /data/reports\n  Size: 4096      \tBlocks: 8          IO Block: 4096   directory\nDevice: fd00h/64768d\tInode: 54321      Links: 2\nAccess: (0755/drwxr-xr-x)  Uid: (    0/    root)   Gid: ( 3000/ managers)\nAccess: 2026-01-20 14:00:00.000000000 -0500\nModify: 2026-01-20 14:00:00.000000000 -0500\nChange: 2026-01-20 14:00:00.000000000 -0500\n Birth: -';
+        }
+        if (input.includes('/tmp/umask-test.txt')) {
+            return '  File: /tmp/umask-test.txt\n  Size: 0           \tBlocks: 0          IO Block: 4096   regular empty file\nDevice: fd00h/64768d\tInode: 56789      Links: 1\nAccess: (0640/-rw-r-----)  Uid: (    0/    root)   Gid: (    0/    root)\nAccess: 2026-01-20 13:00:00.000000000 -0500\nModify: 2026-01-20 13:00:00.000000000 -0500\nChange: 2026-01-20 13:00:00.000000000 -0500\n Birth: -';
+        }
+        if (input.includes('/opt/data/report.txt')) {
+            return '  File: /opt/data/report.txt\n  Size: 4096      \tBlocks: 8          IO Block: 4096   regular file\nDevice: fd00h/64768d\tInode: 1234567    Links: 2\nAccess: (0644/-rw-r--r--)  Uid: (    0/    root)   Gid: (    0/    root)\nAccess: 2026-01-20 10:00:00.000000000 -0500\nModify: 2026-01-20 10:00:00.000000000 -0500\nChange: 2026-01-20 10:00:00.000000000 -0500\n Birth: -';
+        }
+        if (input.includes('/tmp/report-link')) {
+            return '  File: /tmp/report-link\n  Size: 4096      \tBlocks: 8          IO Block: 4096   regular file\nDevice: fd00h/64768d\tInode: 1234567    Links: 2\nAccess: (0644/-rw-r--r--)  Uid: (    0/    root)   Gid: (    0/    root)\nAccess: 2026-01-20 10:00:00.000000000 -0500\nModify: 2026-01-20 10:00:00.000000000 -0500\nChange: 2026-01-20 10:00:00.000000000 -0500\n Birth: -';
+        }
+        if (input.includes('/etc/app/config.conf')) {
+            return '  File: /etc/app/config.conf\n  Size: 1024      \tBlocks: 2          IO Block: 4096   regular file\nDevice: fd00h/64768d\tInode: 7654321    Links: 2\nAccess: (0644/-rw-r--r--)  Uid: (    0/    root)   Gid: (    0/    root)\nAccess: 2026-01-20 11:00:00.000000000 -0500\nModify: 2026-01-20 11:00:00.000000000 -0500\nChange: 2026-01-20 11:00:00.000000000 -0500\n Birth: -';
+        }
+        // Original paths
+        if (input.includes('/opt/data')) {
+            const state5 = fsState['/opt/data'] || { mode: '0750', owner: 'alice', group: 'sysops', acls: 'user:bob:rw-' };
+            return typeof generateStatOutput === 'function'
+                ? generateStatOutput('/opt/data', state5, true)
+                : '  File: /opt/data\n  Size: 4096      \tBlocks: 8          IO Block: 4096   directory\nDevice: fd00h/64768d\tInode: 67890      Links: 2\nAccess: (0750/drwxr-x---)  Uid: ( 5001/   alice)   Gid: ( 6000/  sysops)\nAccess: 2026-01-20 12:00:00.000000000 -0500\nModify: 2026-01-20 12:00:00.000000000 -0500\nChange: 2026-01-20 12:00:00.000000000 -0500\n Birth: -';
+        }
+        if (input.includes('/var/logs')) {
+            const state6 = fsState['/var/logs'] || { mode: '0755', owner: 'root', group: 'loggroup' };
+            return typeof generateStatOutput === 'function'
+                ? generateStatOutput('/var/logs', state6, true)
+                : '  File: /var/logs\n  Size: 4096      \tBlocks: 8          IO Block: 4096   directory\nDevice: fd00h/64768d\tInode: 45678      Links: 2\nAccess: (0755/drwxr-xr-x)  Uid: (    0/    root)   Gid: ( 5000/loggroup)\nAccess: 2026-01-20 11:30:00.000000000 -0500\nModify: 2026-01-20 11:30:00.000000000 -0500\nChange: 2026-01-20 11:30:00.000000000 -0500\n Birth: -';
+        }
+        // Additional paths (missing stat entries)
+        if (input.includes('/var/backup')) {
+            const state7 = fsState['/var/backup'] || { mode: '0755', owner: 'root', group: 'backup' };
+            return typeof generateStatOutput === 'function'
+                ? generateStatOutput('/var/backup', state7, true)
+                : '  File: /var/backup\n  Size: 4096      \tBlocks: 8          IO Block: 4096   directory\nDevice: fd00h/64768d\tInode: 11111      Links: 2\nAccess: (0755/drwxr-xr-x)  Uid: (    0/    root)   Gid: ( 4000/  backup)\nAccess: 2026-01-20 11:30:00.000000000 -0500\nModify: 2026-01-20 11:30:00.000000000 -0500\nChange: 2026-01-20 11:30:00.000000000 -0500\n Birth: -';
+        }
+        if (input.includes('/shared/docs')) {
+            const state8 = fsState['/shared/docs'] || { mode: '0755', owner: 'root', group: 'root', acls: 'default:group:editors:rw-' };
+            return typeof generateStatOutput === 'function'
+                ? generateStatOutput('/shared/docs', state8, true)
+                : '  File: /shared/docs\n  Size: 4096      \tBlocks: 8          IO Block: 4096   directory\nDevice: fd00h/64768d\tInode: 22222      Links: 2\nAccess: (0755/drwxr-xr-x)  Uid: (    0/    root)   Gid: (    0/    root)\nAccess: 2026-01-20 13:00:00.000000000 -0500\nModify: 2026-01-20 13:00:00.000000000 -0500\nChange: 2026-01-20 13:00:00.000000000 -0500\n Birth: -';
+        }
+        if (input.includes('/test/file')) {
+            return '  File: /test/file\n  Size: 512       \tBlocks: 8          IO Block: 4096   regular file\nDevice: fd00h/64768d\tInode: 33333      Links: 1\nAccess: (0644/-rw-r--r--)  Uid: (    0/    root)   Gid: (    0/    root)\nAccess: 2026-01-20 12:30:00.000000000 -0500\nModify: 2026-01-20 12:30:00.000000000 -0500\nChange: 2026-01-20 12:30:00.000000000 -0500\n Birth: -';
+        }
+        if (input.includes('/opt/myapp')) {
+            return '  File: /opt/myapp\n  Size: 4096      \tBlocks: 8          IO Block: 4096   directory\nDevice: fd00h/64768d\tInode: 44444      Links: 4\nAccess: (0755/drwxr-xr-x)  Uid: ( 1100/ appuser)   Gid: ( 1100/  appsvc)\nAccess: 2026-01-20 11:00:00.000000000 -0500\nModify: 2026-01-20 11:00:00.000000000 -0500\nChange: 2026-01-20 11:00:00.000000000 -0500\n Birth: -';
+        }
+        if (input.includes('/srv/files')) {
+            return '  File: /srv/files\n  Size: 4096      \tBlocks: 8          IO Block: 4096   directory\nDevice: fd00h/64768d\tInode: 55555      Links: 2\nAccess: (0755/drwxr-xr-x)  Uid: (    0/    root)   Gid: (    0/    root)\nAccess: 2026-01-20 10:00:00.000000000 -0500\nModify: 2026-01-20 10:00:00.000000000 -0500\nChange: 2026-01-20 10:00:00.000000000 -0500\n Birth: -';
+        }
+        if (input.includes('/opt/app')) {
+            const state9 = fsState['/opt/app'] || { mode: '0750', owner: 'root', group: 'root' };
+            return typeof generateStatOutput === 'function'
+                ? generateStatOutput('/opt/app', state9, true)
+                : '  File: /opt/app\n  Size: 4096      \tBlocks: 8          IO Block: 4096   directory\nDevice: fd00h/64768d\tInode: 66666      Links: 4\nAccess: (0750/drwxr-x---)  Uid: (    0/    root)   Gid: (    0/    root)\nAccess: 2026-01-20 14:00:00.000000000 -0500\nModify: 2026-01-20 14:00:00.000000000 -0500\nChange: 2026-01-20 14:00:00.000000000 -0500\n Birth: -';
+        }
+        if (input.includes('/data/project')) {
+            return '  File: /data/project\n  Size: 4096      \tBlocks: 8          IO Block: 4096   directory\nDevice: fd00h/64768d\tInode: 77777      Links: 3\nAccess: (0755/drwxr-xr-x)  Uid: ( 1400/developer)   Gid: ( 2100/ devteam)\nAccess: 2026-01-20 14:00:00.000000000 -0500\nModify: 2026-01-20 14:00:00.000000000 -0500\nChange: 2026-01-20 14:00:00.000000000 -0500\n Birth: -';
         }
     }
     
-    // Handle findmnt commands
-    if (command === 'findmnt') {
-        if (input.includes('/mnt/backup')) {
-            return 'TARGET       SOURCE    FSTYPE OPTIONS\n/mnt/backup  /dev/sdb1 ext4   rw,relatime';
+    // Handle getfacl commands with dynamic state
+    if (command === 'getfacl') {
+        const pathMatch = input.match(/\/[^\s]+/);
+        const path = pathMatch ? pathMatch[0] : null;
+        
+        if (path && fsState[path] && typeof generateGetfaclOutput === 'function') {
+            return generateGetfaclOutput(path, fsState[path]);
         }
-        if (input.includes('/mnt/external')) {
-            return 'TARGET         SOURCE    FSTYPE OPTIONS\n/mnt/external  /dev/sdb1 ext4   rw,relatime';
+        
+        // Fallback to static output with state-aware generation
+        if (input.includes('/opt/webapp')) {
+            const state = fsState['/opt/webapp'] || { mode: '0755', owner: 'webuser', group: 'developers', acls: 'user:sarah:rwx' };
+            return typeof generateGetfaclOutput === 'function'
+                ? generateGetfaclOutput('/opt/webapp', state)
+                : '# file: /opt/webapp\n# owner: webuser\n# group: developers\nuser::rwx\nuser:sarah:rwx\ngroup::r-x\nmask::rwx\nother::r-x';
         }
-        if (input.includes('/media/usb')) {
-            return 'TARGET      SOURCE    FSTYPE OPTIONS\n/media/usb  /dev/sdc1 vfat   rw,relatime';
+        if (input.includes('/data/reports')) {
+            const state = fsState['/data/reports'] || { mode: '0755', owner: 'root', group: 'managers', acls: 'group:managers:rw-' };
+            return typeof generateGetfaclOutput === 'function'
+                ? generateGetfaclOutput('/data/reports', state)
+                : '# file: /data/reports\n# owner: root\n# group: managers\nuser::rwx\ngroup::r-x\ngroup:managers:rw-\nmask::rwx\nother::r-x';
         }
-    }
-    
-    // Handle mount commands
-    if (command === 'mount') {
-        if (input.includes('/mnt/backup') || (input.includes('/dev/sdb1') && !input.includes('/dev/sdb'))) {
-            return '/dev/sdb1 on /mnt/backup type ext4 (rw,relatime)';
+        if (input.includes('/shared/docs')) {
+            const state = fsState['/shared/docs'] || { mode: '0755', owner: 'root', group: 'root', acls: 'default:group:editors:rw-' };
+            return typeof generateGetfaclOutput === 'function'
+                ? generateGetfaclOutput('/shared/docs', state)
+                : '# file: /shared/docs\n# owner: root\n# group: root\nuser::rwx\ngroup::r-x\nother::r-x\ndefault:user::rwx\ndefault:group::r-x\ndefault:group:editors:rw-\ndefault:mask::rwx\ndefault:other::r-x';
         }
-        if (input.includes('/mnt/external')) {
-            return '/dev/sdb1 on /mnt/external type ext4 (rw,relatime)';
+        if (input.includes('/test/file')) {
+            const state = fsState['/test/file'] || { mode: '0644', owner: 'root', group: 'root' };
+            return typeof generateGetfaclOutput === 'function'
+                ? generateGetfaclOutput('/test/file', state)
+                : '# file: /test/file\n# owner: root\n# group: root\nuser::rw-\ngroup::r--\nother::r--';
         }
-        if (input.includes('/media/usb') || input.includes('/dev/sdc1')) {
-            return '/dev/sdc1 on /media/usb type vfat (rw,relatime,fmask=0022,dmask=0022,codepage=437,iocharset=utf8)';
-        }
-    }
-    
-    // Handle blkid commands
-    if (command === 'blkid') {
-        if (input.includes('/dev/sdb1')) {
-            return '/dev/sdb1: UUID="a1b2c3d4-e5f6-7890-abcd-ef1234567890" TYPE="ext4" PARTUUID="12345678-01"';
-        }
-        if (input.includes('/dev/sdc1')) {
-            return '/dev/sdc1: UUID="fedcba98-7654-3210-fedc-ba9876543210" TYPE="vfat" PARTUUID="87654321-01"';
-        }
-        if (input.includes('/dev/sdd1')) {
-            return '/dev/sdd1: UUID="11223344-5566-7788-99aa-bbccddeeff00" TYPE="xfs" PARTUUID="aabbccdd-01"';
-        }
-        if (input.includes('/dev/sde1')) {
-            return '/dev/sde1: UUID="99887766-5544-3322-1100-ffeeddccbbaa" TYPE="ext4" PARTUUID="ffeeddcc-01"';
-        }
-        if (input.includes('/dev/sdf1')) {
-            return '/dev/sdf1: UUID="aaaabbbb-cccc-dddd-eeee-ffff00001111" TYPE="LVM2_member" PARTUUID="11112222-01"';
+        // Original path
+        if (input.includes('/opt/data')) {
+            const state = fsState['/opt/data'] || { mode: '0750', owner: 'alice', group: 'sysops', acls: 'user:bob:rw-' };
+            return typeof generateGetfaclOutput === 'function'
+                ? generateGetfaclOutput('/opt/data', state)
+                : '# file: /opt/data\n# owner: alice\n# group: sysops\nuser::rwx\nuser:bob:rw-\ngroup::r-x\nmask::rwx\nother::---';
         }
     }
     
-    // Handle cat commands
+    // Handle setfacl commands (Implementation tasks - silent on success)
+    if (command === 'setfacl') {
+        return ''; // Silent success - authentic RHEL behavior
+    }
+    
+    // Handle readlink commands
+    if (command === 'readlink') {
+        if (input.includes('/etc/systemd/system/default.target')) {
+            return '/usr/lib/systemd/system/multi-user.target';
+        }
+        if (input.includes('/home/user/docs')) {
+            if (input.includes('-f')) {
+                return '/mnt/shared/documents';
+            }
+            return '/mnt/shared/documents';
+        }
+        if (input.includes('/usr/local/bin/python')) {
+            if (input.includes('-f')) {
+                return '/usr/bin/python3';
+            }
+            return '/usr/bin/python3';
+        }
+    }
+    
+    // Handle file commands
+    if (command === 'file') {
+        if (input.includes('/home/user/docs')) {
+            return '/home/user/docs: symbolic link to /mnt/shared/documents';
+        }
+        if (input.includes('/usr/local/bin/python')) {
+            return '/usr/local/bin/python: symbolic link to /usr/bin/python3';
+        }
+    }
+    
+    // Handle umask commands
+    if (command === 'umask') {
+        if (input.includes('-S')) {
+            // Assuming umask was set to 0027
+            return 'u=rwx,g=rx,o=';
+        }
+        return '0027';
+    }
+    
+    // Handle find commands
+    if (command === 'find') {
+        if (input.includes('/srv/files') && input.includes('-type') && input.includes('f')) {
+            if (input.includes('-exec') && input.includes('chmod')) {
+                return ''; // chmod produces no output
+            }
+            if (input.includes('-ls')) {
+                return '     -rw-r--r--   1 root     root         1024 Jan 20 10:00 /srv/files/script.sh\n     -rw-r--r--   1 root     root          512 Jan 20 10:00 /srv/files/data.txt\n     -rw-r--r--   1 root     root          256 Jan 20 10:00 /srv/files/subdir/notes.txt';
+            }
+            return '/srv/files/file1.txt\n/srv/files/file2.txt';
+        }
+        if (input.includes('/opt/app') && input.includes('-type') && input.includes('d')) {
+            if (input.includes('-ls')) {
+                return '     drwxr-x---   2 root     root         4096 Jan 20 14:00 /opt/app\n     drwxr-x---   2 root     root         4096 Jan 20 14:00 /opt/app/bin\n     drwxr-x---   2 root     root         4096 Jan 20 14:00 /opt/app/config';
+            }
+            return '/opt/app\n/opt/app/bin\n/opt/app/config';
+        }
+        if (input.includes('/var/log') && input.includes('-perm') && input.includes('002')) {
+            return ''; // No world-writable files found (expected safe state)
+        }
+        if (input.includes('/tmp') && (input.includes('-perm') && (input.includes('4000') || input.includes('2000') || input.includes('6000')))) {
+            return ''; // No setuid/setgid files found in /tmp (expected safe state)
+        }
+        if (input.includes('/data/project') && input.includes('-ls')) {
+            return '     drwxr-xr-x   3 developer devteam      4096 Jan 20 14:00 /data/project\n     drwxr-xr-x   2 developer devteam      4096 Jan 20 14:00 /data/project/src\n     -rw-r--r--   1 developer devteam      2048 Jan 20 14:00 /data/project/README.md\n     -rw-r--r--   1 developer devteam      1024 Jan 20 14:00 /data/project/src/main.c';
+        }
+    }
+    
+    // Handle cat commands for file lists
     if (command === 'cat') {
-        if (input.includes('/tmp/uuid.txt')) {
-            return 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+        if (input.includes('/tmp/olduser-files.txt')) {
+            return '/home/olduser/.bashrc\n/home/olduser/.profile\n/home/olduser/documents/file1.txt';
+        }
+        if (input.includes('/tmp/wrong-owner.txt')) {
+            return '/var/www/html/test.html\n/var/www/cgi-bin/script.sh';
         }
     }
     
-    // Handle tar commands
-    if (command === 'tar') {
-        if (hasFlags(input, 'tzf') && input.includes('data-backup.tar.gz')) {
-            return '/opt/data/\n/opt/data/file1.txt\n/opt/data/file2.txt\n/opt/data/config.conf\n/opt/data/subdir/\n/opt/data/subdir/data.db';
-        }
-        if (hasFlags(input, 'tzf') && input.includes('httpd-backup.tar.gz')) {
-            return 'etc/httpd/\netc/httpd/conf/\netc/httpd/conf/httpd.conf\netc/httpd/conf.d/\netc/httpd/conf.d/ssl.conf';
-        }
-        if (hasFlags(input, 'tjf') && input.includes('logs-backup.tar.bz2')) {
-            return 'var/log/\nvar/log/messages\nvar/log/secure\nvar/log/httpd/\nvar/log/httpd/access_log\nvar/log/httpd/error_log\nvar/log/audit/\nvar/log/audit/audit.log';
-        }
-    }
-    
-    // LVM Physical Volume commands
-    if (command === 'pvs') {
-        if (!tokens[1]) {
-            return '  PV         VG      Fmt  Attr PSize   PFree  \n  /dev/sdb1  datavg  lvm2 a--   <10.00g   5.00g\n  /dev/sdc1  datavg  lvm2 a--    <5.00g   2.00g\n  /dev/sdd1  appvg   lvm2 a--    <8.00g   3.00g\n  /dev/sde1  appvg   lvm2 a--    <8.00g   4.00g';
-        }
-        if (input.includes('/dev/sdb1')) {
-            return '  PV         VG      Fmt  Attr PSize   PFree  \n  /dev/sdb1  datavg  lvm2 a--   <10.00g   5.00g';
-        }
-        if (input.includes('/dev/sdf1')) {
-            return '  PV         VG   Fmt  Attr PSize  PFree \n  /dev/sdf1       lvm2 ---   8.00g  8.00g';
-        }
-    }
-    
-    if (command === 'pvdisplay') {
-        if (input.includes('/dev/sdb1')) {
-            return '  --- Physical volume ---\n  PV Name               /dev/sdb1\n  VG Name               datavg\n  PV Size               10.00 GiB / not usable 4.00 MiB\n  Allocatable           yes \n  PE Size               4.00 MiB\n  Total PE              2559\n  Free PE               1280\n  Allocated PE          1279\n  PV UUID               a1b2c3d4-e5f6-7890-abcd-ef1234567890';
-        }
-        if (input.includes('/dev/sdf1')) {
-            return '  --- Physical volume ---\n  PV Name               /dev/sdf1\n  VG Name               \n  PV Size               8.00 GiB\n  Allocatable           NO\n  PE Size               8.00 MiB\n  Total PE              1024\n  Free PE               1024\n  Allocated PE          0\n  PV UUID               aaaabbbb-cccc-dddd-eeee-ffff00001111';
-        }
-    }
-    
-    if (command === 'pvscan') {
-        return '  PV /dev/sdb1   VG datavg          lvm2 [<10.00 GiB / 5.00 GiB free]\n  PV /dev/sdc1   VG datavg          lvm2 [<5.00 GiB / 2.00 GiB free]\n  PV /dev/sdd1   VG appvg           lvm2 [<8.00 GiB / 3.00 GiB free]\n  PV /dev/sde1   VG appvg           lvm2 [<8.00 GiB / 4.00 GiB free]\n  Total: 4 [30.99 GiB] / in use: 4 [30.99 GiB] / in no VG: 0 [0   ]';
-    }
-    
-    // LVM Volume Group commands
-    if (command === 'vgs') {
-        if (!tokens[1]) {
-            return '  VG     #PV #LV #SN Attr   VSize   VFree \n  appvg    2   2   0 wz--n- <15.99g  7.00g\n  datavg   2   1   0 wz--n- <14.99g  7.00g';
-        }
-        if (input.includes('datavg')) {
-            return '  VG     #PV #LV #SN Attr   VSize   VFree \n  datavg   2   1   0 wz--n- <14.99g  7.00g';
-        }
-        if (input.includes('appvg')) {
-            return '  VG     #PV #LV #SN Attr   VSize   VFree \n  appvg    2   2   0 wz--n- <15.99g  7.00g';
-        }
-        if (input.includes('prodvg')) {
-            return '  VG      #PV #LV #SN Attr   VSize   VFree \n  prodvg    2   2   0 wz--n- <15.99g  7.00g';
-        }
-        if (input.includes('-v')) {
-            return '  VG     Attr   Ext   #PV #LV #SN VSize   VFree  VG UUID                                \n  appvg  wz--n- 4.00m   2   2   0 <15.99g  7.00g  bbbbcccc-dddd-eeee-ffff-000011112222\n  datavg wz--n- 4.00m   2   1   0 <14.99g  7.00g  ccccdddd-eeee-ffff-0000-111122223333';
-        }
-    }
-    
-    if (command === 'vgdisplay') {
-        if (input.includes('datavg')) {
-            return '  --- Volume group ---\n  VG Name               datavg\n  System ID             \n  Format                lvm2\n  Metadata Areas        2\n  Metadata Sequence No  3\n  VG Access             read/write\n  VG Status             resizable\n  MAX LV                0\n  Cur LV                1\n  Open LV               1\n  Max PV                0\n  Cur PV                2\n  Act PV                2\n  VG Size               14.99 GiB\n  PE Size               4.00 MiB\n  Total PE              3837\n  Alloc PE / Size       2048 / 8.00 GiB\n  Free  PE / Size       1789 / 7.00 GiB\n  VG UUID               ccccdddd-eeee-ffff-0000-111122223333';
-        }
-        if (input.includes('appvg')) {
-            return '  --- Volume group ---\n  VG Name               appvg\n  System ID             \n  Format                lvm2\n  Metadata Areas        2\n  Metadata Sequence No  5\n  VG Access             read/write\n  VG Status             resizable\n  MAX LV                0\n  Cur LV                2\n  Open LV               0\n  Max PV                0\n  Cur PV                2\n  Act PV                2\n  VG Size               15.99 GiB\n  PE Size               8.00 MiB\n  Total PE              2046\n  Alloc PE / Size       1152 / 9.00 GiB\n  Free  PE / Size       894 / 7.00 GiB\n  VG UUID               bbbbcccc-dddd-eeee-ffff-000011112222';
-        }
-        if (input.includes('prodvg')) {
-            return '  --- Volume group ---\n  VG Name               prodvg\n  System ID             \n  Format                lvm2\n  Metadata Areas        2\n  Metadata Sequence No  5\n  VG Access             read/write\n  VG Status             resizable\n  MAX LV                0\n  Cur LV                2\n  Open LV               0\n  Max PV                0\n  Cur PV                2\n  Act PV                2\n  VG Size               15.99 GiB\n  PE Size               8.00 MiB\n  Total PE              2046\n  Alloc PE / Size       1152 / 9.00 GiB\n  Free  PE / Size       894 / 7.00 GiB\n  VG UUID               bbbbcccc-dddd-eeee-ffff-000011112222';
-        }
-    }
-    
-    if (command === 'vgscan') {
-        return '  Found volume group "appvg" using metadata type lvm2\n  Found volume group "datavg" using metadata type lvm2';
-    }
-    
-    // LVM Logical Volume commands
-    if (command === 'lvs') {
-        if (!tokens[1]) {
-            return '  LV     VG     Attr       LSize   Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert\n  dblv   appvg  -wi-a-----   2.00g                                                    \n  applv  datavg -wi-ao---- 500.00m                                                    \n  weblv  datavg -wi-a----- 700.00m';
-        }
-        if (input.includes('datavg/applv') || input.includes('applv')) {
-            return '  LV    VG     Attr       LSize   Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert\n  applv datavg -wi-ao---- 500.00m';
-        }
-        if (input.includes('datavg/weblv') || input.includes('weblv')) {
-            return '  LV    VG     Attr       LSize   Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert\n  weblv datavg -wi-a----- 700.00m';
-        }
-        if (input.includes('appvg/dblv') || input.includes('dblv')) {
-            return '  LV   VG    Attr       LSize Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert\n  dblv appvg -wi-a----- 2.00g';
-        }
-    }
-    
-    if (command === 'lvdisplay') {
-        if (input.includes('/dev/datavg/applv') || input.includes('datavg/applv')) {
-            return '  --- Logical volume ---\n  LV Path                /dev/datavg/applv\n  LV Name                applv\n  VG Name                datavg\n  LV UUID                11112222-3333-4444-5555-666677778888\n  LV Write Access        read/write\n  LV Creation host, time server1.example.com, 2026-02-23 10:00:00 -0500\n  LV Status              available\n  # open                 1\n  LV Size                500.00 MiB\n  Current LE             128\n  Segments               1\n  Allocation             inherit\n  Read ahead sectors     auto\n  - currently set to     256\n  Block device           253:0';
-        }
-        if (input.includes('/dev/datavg/weblv') || input.includes('datavg/weblv')) {
-            return '  --- Logical volume ---\n  LV Path                /dev/datavg/weblv\n  LV Name                weblv\n  VG Name                datavg\n  LV UUID                22223333-4444-5555-6666-777788889999\n  LV Write Access        read/write\n  LV Creation host, time server1.example.com, 2026-02-23 11:00:00 -0500\n  LV Status              available\n  # open                 0\n  LV Size                700.00 MiB\n  Current LE             175\n  Segments               1\n  Allocation             inherit\n  Read ahead sectors     auto\n  - currently set to     256\n  Block device           253:1';
-        }
-        if (input.includes('/dev/appvg/dblv') || input.includes('appvg/dblv')) {
-            return '  --- Logical volume ---\n  LV Path                /dev/appvg/dblv\n  LV Name                dblv\n  VG Name                appvg\n  LV UUID                33334444-5555-6666-7777-888899990000\n  LV Write Access        read/write\n  LV Creation host, time server1.example.com, 2026-02-23 12:00:00 -0500\n  LV Status              available\n  # open                 0\n  LV Size                2.00 GiB\n  Current LE             256\n  Segments               1\n  Allocation             inherit\n  Read ahead sectors     auto\n  - currently set to     256\n  Block device           253:2';
-        }
-    }
-    
-    if (command === 'lvscan') {
-        return "  ACTIVE            '/dev/datavg/applv' [500.00 MiB] inherit\n  ACTIVE            '/dev/datavg/weblv' [700.00 MiB] inherit\n  ACTIVE            '/dev/appvg/dblv' [2.00 GiB] inherit";
-    }
-    
-    // LVM Creation/Modification commands (Implementation tasks)
-    if (command === 'pvcreate') {
-        if (input.includes('/dev/sdf1')) {
-            return '  Physical volume "/dev/sdf1" successfully created.';
-        }
-        if (input.includes('/dev/sdb1')) {
-            return '  Physical volume "/dev/sdb1" successfully created.';
-        }
-        if (input.includes('/dev/sdc1')) {
-            return '  Physical volume "/dev/sdc1" successfully created.';
-        }
-        return '  Physical volume successfully created.';
-    }
-    
-    if (command === 'vgcreate') {
-        if (input.includes('datavg')) {
-            return '  Volume group "datavg" successfully created';
-        }
-        if (input.includes('appvg')) {
-            return '  Volume group "appvg" successfully created';
-        }
-        if (input.includes('prodvg')) {
-            return '  Volume group "prodvg" successfully created';
-        }
-        return '  Volume group successfully created';
-    }
-    
-    if (command === 'vgextend') {
-        if (input.includes('datavg')) {
-            return '  Volume group "datavg" successfully extended';
-        }
-        if (input.includes('appvg')) {
-            return '  Volume group "appvg" successfully extended';
-        }
-        return '  Volume group successfully extended';
-    }
-    
-    if (command === 'lvcreate') {
-        if (input.includes('applv')) {
-            return '  Logical volume "applv" created.';
-        }
-        if (input.includes('weblv')) {
-            return '  Logical volume "weblv" created.';
-        }
-        if (input.includes('dblv')) {
-            return '  Logical volume "dblv" created.';
-        }
-        if (input.includes('-L')) {
-            // Extract LV name from -n parameter
-            return '  Logical volume created.';
-        }
-        return '  Logical volume created.';
-    }
-    
-    if (command === 'lvextend' || command === 'lvresize') {
-        if (input.includes('applv')) {
-            return '  Size of logical volume datavg/applv changed from 500.00 MiB (125 extents) to 1.00 GiB (256 extents).\n  Logical volume datavg/applv successfully resized.';
-        }
-        if (input.includes('weblv')) {
-            return '  Size of logical volume datavg/weblv changed from 700.00 MiB (175 extents) to 2.00 GiB (512 extents).\n  Logical volume datavg/weblv successfully resized.';
-        }
-        return '  Logical volume successfully resized.';
-    }
-    
-    // Partitioning commands
-    if (command === 'fdisk') {
-        if (input.includes('-l') && input.includes('/dev/sdb')) {
-            return 'Disk /dev/sdb: 20 GiB, 21474836480 bytes, 41943040 sectors\nDisk model: Virtual disk    \nUnits: sectors of 1 * 512 = 512 bytes\nSector size (logical/physical): 512 bytes / 512 bytes\nI/O size (minimum/optimal): 512 bytes / 512 bytes\nDisklabel type: gpt\nDisk identifier: 12345678-1234-5678-1234-567812345678\n\nDevice       Start      End  Sectors Size Type\n/dev/sdb1     2048  1050623  1048576 512M Linux filesystem';
-        }
-    }
-    
-    if (command === 'parted') {
-        if (input.includes('/dev/sdb') && input.includes('print')) {
-            return 'Model: VMware Virtual disk (scsi)\nDisk /dev/sdb: 21.5GB\nSector size (logical/physical): 512B/512B\nPartition Table: gpt\nDisk Flags: \n\nNumber  Start   End     Size    File system  Name  Flags\n 1      1049kB  538MB   537MB                      lvm';
-        }
-        if (input.includes('/dev/sdc') && input.includes('print')) {
-            return 'Model: VMware Virtual disk (scsi)\nDisk /dev/sdc: 10.7GB\nSector size (logical/physical): 512B/512B\nPartition Table: gpt\nDisk Flags: \n\nNumber  Start   End     Size    File system  Name  Flags\n 1      1049kB  1075MB  1074MB';
-        }
-    }
-    
-    if (command === 'gdisk') {
-        if (input.includes('-l') && input.includes('/dev/sdb')) {
-            return 'GPT fdisk (gdisk) version 1.0.7\n\nPartition table scan:\n  MBR: protective\n  BSD: not present\n  APM: not present\n  GPT: present\n\nFound valid GPT with protective MBR; using GPT.\nDisk /dev/sdb: 41943040 sectors, 20.0 GiB\nSector size (logical/physical): 512/512 bytes\nDisk identifier (GUID): 12345678-1234-5678-1234-567812345678\nPartition table holds up to 128 entries\nMain partition table begins at sector 2 and ends at sector 33\n\nNumber  Start (sector)    End (sector)  Size       Code  Name\n   1            2048         1050623   512.0 MiB   8E00  Linux LVM';
-        }
-    }
-    
-    if (command === 'lsblk') {
-        if (input.includes('/dev/sdb')) {
-            return 'NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT\nsdb      8:16   0   20G  0 disk \n└─sdb1   8:17   0  512M  0 part /mnt/backup';
-        }
-        if (input.includes('/dev/sdc')) {
-            return 'NAME   MAJ:MIN RM SIZE RO TYPE MOUNTPOINT\nsdc      8:32   0  10G  0 disk \n└─sdc1   8:33   0   1G  0 part /media/usb';
-        }
-        if (!tokens[1]) {
-            return 'NAME            MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT\nsda               8:0    0   50G  0 disk \n├─sda1            8:1    0    1G  0 part /boot\n└─sda2            8:2    0   49G  0 part \n  ├─rhel-root   253:0    0   44G  0 lvm  /\n  └─rhel-swap   253:1    0    5G  0 lvm  [SWAP]\nsdb               8:16   0   20G  0 disk \n└─sdb1            8:17   0  512M  0 part /mnt/backup\nsdc               8:32   0   10G  0 disk \n└─sdc1            8:33   0    1G  0 part ';
-        }
-        if (input.includes('-f')) {
-            return 'NAME            FSTYPE      LABEL UUID                                 FSAVAIL FSUSE% MOUNTPOINT\nsda                                                                          \n├─sda1          xfs               a1b2c3d4-e5f6-7890-abcd-ef1234567890    800M    20% /boot\n└─sda2          LVM2_member       fedcba98-7654-3210-fedc-ba9876543210                \n  ├─rhel-root   xfs               11223344-5566-7788-99aa-bbccddeeff00   35.2G    20% /\n  └─rhel-swap   swap              99887766-5544-3322-1100-ffeeddccbbaa                [SWAP]\nsdb                                                                          \n└─sdb1          ext4              a1b2c3d4-e5f6-7890-abcd-ef1234567890    400M    20% /mnt/backup\nsdc                                                                          \n└─sdc1          vfat              fedcba98-7654-3210-fedc-ba9876543210    800M    20% ';
+    // Handle wc commands
+    if (command === 'wc' && input.includes('-l')) {
+        if (input.includes('/tmp/wrong-owner.txt')) {
+            return '2 /tmp/wrong-owner.txt';
         }
     }
     
@@ -338,37 +424,212 @@ function generateSection3Output(command, input, tokens) {
 }
 
 /**
- * Section 4: Essential Tools - Output Generator
+ * Section 3: Storage and File Systems - Output Generator
  */
 function generateSection3PreCheck(task, command, input, tokens) {
-    if (task.id === 1 && command === 'ls') {
-        if (hasFlags(input, 'ld') && input.includes('/mnt/backup')) {
-            return 'ls: cannot access \'/mnt/backup\': No such file or directory';
+    // Set1: /opt/webapp - before chmod/chown (shows restrictive/wrong state)
+    if (input.includes('/opt/webapp')) {
+        if (command === 'ls' && (hasFlags(input, 'ld') || hasFlags(input, 'l'))) {
+            return 'drwxr-x--- 2 root root 4096 Jan 20 12:00 /opt/webapp';
         }
-        if (input.includes('/mnt') && !input.includes('/mnt/backup')) {
-            return '';
+        if (command === 'stat') {
+            return '  File: /opt/webapp\n  Size: 4096      \tBlocks: 8          IO Block: 4096   directory\nDevice: fd00h/64768d\tInode: 12345      Links: 2\nAccess: (0750/drwxr-x---)  Uid: (    0/    root)   Gid: (    0/    root)\nAccess: 2026-01-20 12:00:00.000000000 -0500\nModify: 2026-01-20 12:00:00.000000000 -0500\nChange: 2026-01-20 12:00:00.000000000 -0500\n Birth: -';
         }
-    }
-    
-    if (task.id === 3) {
-        if (command === 'mount' && (input.includes('/mnt/backup') || input.includes('/dev/sdb1'))) {
-            return '';
-        }
-        if (command === 'df' && input.includes('/mnt/backup')) {
-            return 'df: /mnt/backup: No such file or directory';
-        }
-        if (command === 'findmnt' && input.includes('/mnt/backup')) {
-            return '';
+        if (command === 'getfacl') {
+            return '# file: opt/webapp\n# owner: root\n# group: root\nuser::rwx\ngroup::r-x\nother::---';
         }
     }
-    
-    if (task.id === 5 && command === 'ls' && input.includes('data-backup.tar.gz')) {
-        return 'ls: cannot access \'data-backup.tar.gz\': No such file or directory';
+
+    // Set1: /var/backup - before chgrp backup
+    if (input.includes('/var/backup')) {
+        if (command === 'ls' && (hasFlags(input, 'ld') || hasFlags(input, 'l'))) {
+            return 'drwxr-xr-x 2 root root 4096 Jan 20 11:30 /var/backup';
+        }
+        if (command === 'stat') {
+            return '  File: /var/backup\n  Size: 4096      \tBlocks: 8          IO Block: 4096   directory\nDevice: fd00h/64768d\tInode: 23456      Links: 2\nAccess: (0755/drwxr-xr-x)  Uid: (    0/    root)   Gid: (    0/    root)\nAccess: 2026-01-20 11:30:00.000000000 -0500\nModify: 2026-01-20 11:30:00.000000000 -0500\nChange: 2026-01-20 11:30:00.000000000 -0500\n Birth: -';
+        }
     }
-    
+
+    // Set2: /etc/appconfig - before chmod 640
+    if (input.includes('/etc/appconfig')) {
+        if (command === 'ls' && hasFlags(input, 'l')) {
+            return '-rw-r--r-- 1 root root 512 Jan 20 10:00 /etc/appconfig';
+        }
+        if (command === 'stat') {
+            return '  File: /etc/appconfig\n  Size: 512       \tBlocks: 8          IO Block: 4096   regular file\nDevice: fd00h/64768d\tInode: 34567      Links: 1\nAccess: (0644/-rw-r--r--)  Uid: (    0/    root)   Gid: (    0/    root)\nAccess: 2026-01-20 10:00:00.000000000 -0500\nModify: 2026-01-20 10:00:00.000000000 -0500\nChange: 2026-01-20 10:00:00.000000000 -0500\n Birth: -';
+        }
+    }
+
+    // Set2: /shared/projects - before setgid (no 's' in group execute)
+    if (input.includes('/shared/projects')) {
+        if (command === 'ls' && (hasFlags(input, 'ld') || hasFlags(input, 'l'))) {
+            return 'drwxr-xr-x 2 root root 4096 Jan 20 11:00 /shared/projects';
+        }
+        if (command === 'stat') {
+            return '  File: /shared/projects\n  Size: 4096      \tBlocks: 8          IO Block: 4096   directory\nDevice: fd00h/64768d\tInode: 45678      Links: 2\nAccess: (0755/drwxr-xr-x)  Uid: (    0/    root)   Gid: (    0/    root)\nAccess: 2026-01-20 11:00:00.000000000 -0500\nModify: 2026-01-20 11:00:00.000000000 -0500\nChange: 2026-01-20 11:00:00.000000000 -0500\n Birth: -';
+        }
+    }
+
+    // Set2: /data/reports - before group ACL
+    if (input.includes('/data/reports')) {
+        if (command === 'ls' && (hasFlags(input, 'ld') || hasFlags(input, 'l'))) {
+            return 'drwxr-xr-x 2 root root 4096 Jan 20 11:00 /data/reports';
+        }
+        if (command === 'stat') {
+            return '  File: /data/reports\n  Size: 4096      \tBlocks: 8          IO Block: 4096   directory\nDevice: fd00h/64768d\tInode: 56789      Links: 2\nAccess: (0755/drwxr-xr-x)  Uid: (    0/    root)   Gid: (    0/    root)\nAccess: 2026-01-20 11:00:00.000000000 -0500\nModify: 2026-01-20 11:00:00.000000000 -0500\nChange: 2026-01-20 11:00:00.000000000 -0500\n Birth: -';
+        }
+        if (command === 'getfacl') {
+            return '# file: data/reports\n# owner: root\n# group: root\nuser::rwx\ngroup::r-x\nother::r-x';
+        }
+    }
+
+    // Set2: /tmp/shared - before sticky bit (shows 777, no 't')
+    if (input.includes('/tmp/shared')) {
+        if (command === 'ls' && (hasFlags(input, 'ld') || hasFlags(input, 'l'))) {
+            return 'drwxrwxrwx 2 root root 4096 Jan 20 11:00 /tmp/shared';
+        }
+        if (command === 'stat') {
+            return '  File: /tmp/shared\n  Size: 4096      \tBlocks: 8          IO Block: 4096   directory\nDevice: fd00h/64768d\tInode: 67890      Links: 2\nAccess: (0777/drwxrwxrwx)  Uid: (    0/    root)   Gid: (    0/    root)\nAccess: 2026-01-20 11:00:00.000000000 -0500\nModify: 2026-01-20 11:00:00.000000000 -0500\nChange: 2026-01-20 11:00:00.000000000 -0500\n Birth: -';
+        }
+    }
+
+    // Set3: /srv/files - before chmod 644 on files (files have wrong perms)
+    if (input.includes('/srv/files')) {
+        if (command === 'ls') {
+            return '/srv/files:\ntotal 12\ndrwxr-xr-x 2 root root 4096 Jan 20 10:00 subdir\n-rwxrwxrwx 1 root root 1024 Jan 20 10:00 script.sh\n-rwxrwxrwx 1 root root  512 Jan 20 10:00 data.txt\n\n/srv/files/subdir:\ntotal 4\n-rwxrwxrwx 1 root root 256 Jan 20 10:00 notes.txt';
+        }
+        if (command === 'find' && !input.includes('-exec')) {
+            return '/srv/files/script.sh\n/srv/files/data.txt\n/srv/files/subdir/notes.txt';
+        }
+    }
+
+    // Set3: /opt/myapp - before recursive chown appuser:appsvc
+    if (input.includes('/opt/myapp')) {
+        if (command === 'ls' && hasFlags(input, 'ld')) {
+            return 'drwxr-xr-x 3 root root 4096 Jan 20 10:00 /opt/myapp';
+        }
+        if (command === 'ls' && hasFlags(input, 'lR')) {
+            return '/opt/myapp:\ntotal 8\ndrwxr-xr-x 2 root root 4096 Jan 20 10:00 config\n-rw-r--r-- 1 root root  512 Jan 20 10:00 app.conf\n\n/opt/myapp/config:\ntotal 4\n-rw-r--r-- 1 root root 256 Jan 20 10:00 settings.json';
+        }
+        if (command === 'stat') {
+            return '  File: /opt/myapp\n  Size: 4096      \tBlocks: 8          IO Block: 4096   directory\nDevice: fd00h/64768d\tInode: 78901      Links: 3\nAccess: (0755/drwxr-xr-x)  Uid: (    0/    root)   Gid: (    0/    root)\nAccess: 2026-01-20 10:00:00.000000000 -0500\nModify: 2026-01-20 10:00:00.000000000 -0500\nChange: 2026-01-20 10:00:00.000000000 -0500\n Birth: -';
+        }
+    }
+
+    // Set3: /shared/docs - before default ACL for editors group
+    if (input.includes('/shared/docs')) {
+        if (command === 'ls' && (hasFlags(input, 'ld') || hasFlags(input, 'l'))) {
+            return 'drwxr-xr-x 2 root root 4096 Jan 20 13:00 /shared/docs';
+        }
+        if (command === 'getfacl') {
+            return '# file: shared/docs\n# owner: root\n# group: root\nuser::rwx\ngroup::r-x\nother::r-x';
+        }
+    }
+
+    // Set3: /test/file - before ACL removal (shows '+' indicating ACLs exist)
+    if (input.includes('/test/file')) {
+        if (command === 'ls' && hasFlags(input, 'l')) {
+            return '-rw-r--r--+ 1 root root 1024 Jan 20 12:00 /test/file';
+        }
+        if (command === 'getfacl') {
+            return '# file: test/file\n# owner: root\n# group: root\nuser::rw-\nuser:alice:rw-\ngroup::r--\nmask::rw-\nother::r--';
+        }
+    }
+
+    // Set6: /opt/app dirs - before chmod 750 (show mix of permissions)
+    if (input.includes('/opt/app') && !input.includes('/opt/webapp') && !input.includes('/opt/myapp')) {
+        if (command === 'find') {
+            return '/opt/app\n/opt/app/bin\n/opt/app/lib\n/opt/app/conf';
+        }
+    }
+
+    // Set6: /data/project - before recursive chown developer:devteam
+    if (input.includes('/data/project')) {
+        if (command === 'ls' && hasFlags(input, 'lR')) {
+            return '/data/project:\ntotal 8\ndrwxr-xr-x 2 root root 4096 Jan 20 09:00 src\n-rw-r--r-- 1 root root  512 Jan 20 09:00 README.md\n\n/data/project/src:\ntotal 4\n-rw-r--r-- 1 root root 2048 Jan 20 09:00 main.c';
+        }
+    }
+
+    // Set4: /opt/data/report.txt - before hard link (link count 1)
+    if (input.includes('/opt/data/report.txt')) {
+        if (command === 'ls' && hasFlags(input, 'li')) {
+            return '131073 -rw-r--r-- 1 root root 2048 Jan 20 14:00 /opt/data/report.txt';
+        }
+        if (command === 'stat') {
+            return '  File: /opt/data/report.txt\n  Size: 2048      \tBlocks: 8          IO Block: 4096   regular file\nDevice: fd00h/64768d\tInode: 131073     Links: 1\nAccess: (0644/-rw-r--r--)  Uid: (    0/    root)   Gid: (    0/    root)\nAccess: 2026-01-20 14:00:00.000000000 -0500\nModify: 2026-01-20 14:00:00.000000000 -0500\nChange: 2026-01-20 14:00:00.000000000 -0500\n Birth: -';
+        }
+    }
+
+    // Set4: /tmp/report-link - before creation (does not exist)
+    if (input.includes('/tmp/report-link')) {
+        if (command === 'ls') {
+            return "ls: cannot access '/tmp/report-link': No such file or directory";
+        }
+    }
+
+    // Set4: /home/user/docs symlink - before creation
+    if (input.includes('/home/user/docs')) {
+        if (command === 'ls') {
+            return "ls: cannot access '/home/user/docs': No such file or directory";
+        }
+        if (command === 'readlink') {
+            return "readlink: /home/user/docs: No such file or directory";
+        }
+    }
+
+    // Set4: /etc/app/config.conf - before hard link (link count 1)
+    if (input.includes('/etc/app/config.conf')) {
+        if (command === 'ls' && hasFlags(input, 'li')) {
+            return '262144 -rw-r--r-- 1 root root 1024 Jan 20 15:00 /etc/app/config.conf';
+        }
+        if (command === 'stat') {
+            return '  File: /etc/app/config.conf\n  Size: 1024      \tBlocks: 8          IO Block: 4096   regular file\nDevice: fd00h/64768d\tInode: 262144     Links: 1\nAccess: (0644/-rw-r--r--)  Uid: (    0/    root)   Gid: (    0/    root)\nAccess: 2026-01-20 15:00:00.000000000 -0500\nModify: 2026-01-20 15:00:00.000000000 -0500\nChange: 2026-01-20 15:00:00.000000000 -0500\n Birth: -';
+        }
+    }
+
+    // Set4: /backup/config.conf - before hard link creation
+    if (input.includes('/backup/config.conf')) {
+        if (command === 'ls' && hasFlags(input, 'li')) {
+            return "ls: cannot access '/backup/config.conf': No such file or directory";
+        }
+    }
+
+    // Set4: /usr/local/bin/python - before symlink creation
+    if (input.includes('/usr/local/bin/python')) {
+        if (command === 'ls') {
+            return "ls: cannot access '/usr/local/bin/python': No such file or directory";
+        }
+        if (command === 'readlink') {
+            return "readlink: /usr/local/bin/python: No such file or directory";
+        }
+    }
+
+    // Set5: /tmp/umask-test.txt - before creation
+    if (input.includes('/tmp/umask-test.txt')) {
+        if (command === 'ls') {
+            return "ls: cannot access '/tmp/umask-test.txt': No such file or directory";
+        }
+    }
+
+    // Set6: /tmp/olduser-files.txt and /tmp/wrong-owner.txt
+    if (input.includes('/tmp/olduser-files.txt')) {
+        if (command === 'cat' || command === 'less') {
+            return "cat: /tmp/olduser-files.txt: No such file or directory";
+        }
+        if (command === 'ls') {
+            return "ls: cannot access '/tmp/olduser-files.txt': No such file or directory";
+        }
+    }
+
+    if (input.includes('/tmp/wrong-owner.txt')) {
+        if (command === 'cat' || command === 'less') {
+            return "cat: /tmp/wrong-owner.txt: No such file or directory";
+        }
+    }
+
     return null;
 }
 
 /**
- * Section 4 Pre-Check Output (BEFORE state)
+ * Section 3 Pre-Check Output (BEFORE state)
  */

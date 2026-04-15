@@ -309,6 +309,16 @@ function handleSubmit() {
         return;
     }
     
+    // Special handler for Section 19 Boot Simulator (Root Password Reset)
+    if (appState.currentSectionId === 19 && handleBootSimulatorSection19(input, task)) {
+        return;
+    }
+
+    // Special handler for Section 20 Boot Simulator (Root Password Reset — Bash Method)
+    if (appState.currentSectionId === 20 && handleBootSimulatorSection20(input, task)) {
+        return;
+    }
+    
     // Check if this is a help command (-h flag)
     if (handleHelpCommand(input, task, grepParsed)) {
         return;
@@ -510,6 +520,202 @@ function handleHelpCommand(input, task, grepParsed) {
     }
     
     return true;
+}
+
+// ==================== SECTION 19: BOOT SIMULATOR ====================
+
+// (section 20 handler is defined further below)
+/**
+ * @param {string} input - User input
+ * @param {object} task  - Current task
+ * @returns {boolean} - True if handled
+ */
+function handleBootSimulatorSection19(input, task) {
+    // If the current task is a bootModal task (tasks 2-8), intercept all terminal input
+    if (task.bootModal) {
+        const tokens  = input.trim().split(/\s+/);
+        const command = tokens[0];
+        const isReboot = command === 'reboot' ||
+                         (command === 'systemctl' && tokens.includes('reboot'));
+        if (isReboot) {
+            addResultToHistory('Relaunching boot simulator...', 'info');
+            openBootSimulator();
+        } else {
+            addResultToHistory(
+                'This task is completed inside the Boot Simulator. Type \'reboot\' to open it.',
+                'info'
+            );
+        }
+        return true;
+    }
+
+    // Task 1: triggersBootModal — validate reboot then open simulator
+    if (!task.triggersBootModal) return false;
+
+    const tokens  = input.trim().split(/\s+/);
+    const command = tokens[0];
+    const isReboot = command === 'reboot' ||
+                     (command === 'systemctl' && tokens.includes('reboot'));
+    if (!isReboot) return false;
+
+    const validationResult = validateCommand(input, task.expected);
+    if (!validationResult.valid) return false;
+
+    handleCorrectAnswer(task, input, null);
+    openBootSimulator();
+    return true;
+}
+
+/**
+ * Create and open the BootSimulator modal for Section 19
+ */
+function openBootSimulator() {
+    if (typeof BootSimulator === 'undefined') {
+        addResultToHistory('Boot simulator not available.', 'error');
+        return;
+    }
+    const questionSetIndex = getQuestionSetForSection(appState.currentSectionId);
+    const section          = getSectionById(appState.currentSectionId, questionSetIndex);
+    const bootTasks        = section.tasks.filter(t => t.bootModal === true);
+    const completedIds     = appState.sectionProgress[appState.currentSectionId].completedTasks;
+
+    const simulator = new BootSimulator({
+        tasks:            bootTasks,
+        completedTaskIds: completedIds,
+        onTaskComplete:   (taskId, explanation) => completeBootModalTask(taskId, explanation),
+        onAllComplete:    () => { if (elements.terminalInput) elements.terminalInput.focus(); }
+    });
+    simulator.open();
+}
+
+/**
+ * Mark a boot-simulator task complete, updating score and UI
+ * @param {number} taskId      - The task id completed inside the boot modal
+ * @param {string} explanation - The task explanation
+ */
+function completeBootModalTask(taskId, explanation) {
+    const questionSetIndex = getQuestionSetForSection(appState.currentSectionId);
+    const section          = getSectionById(appState.currentSectionId, questionSetIndex);
+
+    // Skip if already completed
+    if (appState.sectionProgress[section.id].completedTasks.includes(taskId)) return;
+
+    const task = section.tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    // Award points
+    appState.sectionProgress[section.id].score += task.points;
+    appState.sectionProgress[section.id].completedTasks.push(taskId);
+    appState.totalScore += task.points;
+
+    // Advance currentTaskIndex to the next non-completed task
+    const nextIdx = section.tasks.findIndex(
+        t => !appState.sectionProgress[section.id].completedTasks.includes(t.id)
+    );
+    appState.currentTaskIndex = nextIdx >= 0 ? nextIdx : section.tasks.length;
+
+    updateTaskList(section);
+    updateSectionUI(section);
+
+    // Handle section completion
+    if (appState.currentTaskIndex >= section.tasks.length) {
+        if (!appState.completedSections.includes(section.id)) {
+            appState.completedSections.push(section.id);
+        }
+        updateCurrentTask(section);
+        updateNavigationButtons();
+    }
+
+    saveProgress();
+}
+
+// ==================== SECTION 20: BOOT SIMULATOR (BASH METHOD) ====================
+
+/**
+ * Handle reboot / boot-modal tasks in Section 20 (Root Password Reset — Bash Method)
+ */
+function handleBootSimulatorSection20(input, task) {
+    if (task.bootModal) {
+        const tokens  = input.trim().split(/\s+/);
+        const command = tokens[0];
+        const isReboot = command === 'reboot' ||
+                         (command === 'systemctl' && tokens.includes('reboot'));
+        if (isReboot) {
+            addResultToHistory('Relaunching boot simulator...', 'info');
+            openBootSimulatorSection20();
+        } else {
+            addResultToHistory(
+                'This task is completed inside the Boot Simulator. Type \'reboot\' to open it.',
+                'info'
+            );
+        }
+        return true;
+    }
+
+    if (!task.triggersBootModal) return false;
+
+    const tokens  = input.trim().split(/\s+/);
+    const command = tokens[0];
+    const isReboot = command === 'reboot' ||
+                     (command === 'systemctl' && tokens.includes('reboot'));
+    if (!isReboot) return false;
+
+    const validationResult = validateCommand(input, task.expected);
+    if (!validationResult.valid) return false;
+
+    handleCorrectAnswer(task, input, null);
+    openBootSimulatorSection20();
+    return true;
+}
+
+/**
+ * Create and open the BootSimulator modal for Section 20 (init=/bin/bash method)
+ */
+function openBootSimulatorSection20() {
+    if (typeof BootSimulator === 'undefined') {
+        addResultToHistory('Boot simulator not available.', 'error');
+        return;
+    }
+    const questionSetIndex = getQuestionSetForSection(appState.currentSectionId);
+    const section          = getSectionById(appState.currentSectionId, questionSetIndex);
+    const bootTasks        = section.tasks.filter(t => t.bootModal === true);
+    const completedIds     = appState.sectionProgress[appState.currentSectionId].completedTasks;
+
+    const simulator = new BootSimulator({
+        tasks:            bootTasks,
+        completedTaskIds: completedIds,
+        onTaskComplete:   (taskId, explanation) => completeBootModalTask(taskId, explanation),
+        onAllComplete:    () => { if (elements.terminalInput) elements.terminalInput.focus(); },
+
+        // Section 20 — RHEL 10 init=/bin/bash config
+        appendCommand:   'init=/bin/bash',
+        initialPrompt:   'bash-5.2# ',
+        grubVersion:     '2.12',
+        grubTitle:       'Red Hat Enterprise Linux (6.12.0-55.29.1.el10_0.x86_64) 10.0 (Coughlan)',
+        grubRescue:      'Red Hat Enterprise Linux (0-rescue-...) 10.0 (Coughlan)',
+        grubEditorLines: [
+            'load_video',
+            'set gfxpayload=keep',
+            'insmod gzio',
+            'insmod part_gpt',
+            'insmod xfs',
+            "set root='hd0,gpt2'",
+            "search --no-floppy --label --set=root 'boot'",
+            "echo 'Loading Red Hat Enterprise Linux...'",
+            'linux   ($root)/vmlinuz-6.12.0-55.29.1.el10_0.x86_64 root=/dev/mapper/rhel-root ro crashkernel=1G-4G:192M,4G-64G:256M,64G-:512M resume=/dev/mapper/rhel-swap rd.lvm.lv=rhel/root rd.lvm.lv=rhel/swap rhgb quiet',
+            'initrd ($root)/initramfs-6.12.0-55.29.1.el10_0.x86_64.img $tuned_initrd'
+        ],
+        bootMessages: [
+            '[    0.000000] Linux version 6.12.0-55.29.1.el10_0.x86_64',
+            '[    0.123456] Command line: BOOT_IMAGE=... init=/bin/bash',
+            '[    1.482345] EXT4-fs: mounted filesystem',
+            '[    2.001234] Run /bin/bash as init process',
+            '',
+        ],
+        shellIntro: [''],
+        chrootTaskId: null   // no chroot in this method
+    });
+    simulator.open();
 }
 
 /**

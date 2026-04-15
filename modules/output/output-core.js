@@ -169,6 +169,10 @@ function generateSimulatedOutput(task, input, grepParsed) {
         return generateSection17Output(command, input, tokens);
     } else if (sectionId === 18) {
         return generateSection18Output(input, tokens);
+    } else if (sectionId === 19) {
+        return generateSection19Output(command, input, tokens);
+    } else if (sectionId === 20) {
+        return generateSection20Output(command, input, tokens);
     }
     
     return null;
@@ -206,8 +210,20 @@ function generatePreCheckOutput(task, input, grepParsed) {
         return generateSection9PreCheck(task, command, input, tokens);
     } else if (section.id === 10) {
         return generateSection10PreCheck(task, command, input, tokens);
+    } else if (section.id === 11) {
+        return generateSection11PreCheck(task, command, input, tokens);
+    } else if (section.id === 13) {
+        return generateSection13PreCheck(task, command, input, tokens);
+    } else if (section.id === 14) {
+        return generateSection14PreCheck(task, command, input, tokens);
+    } else if (section.id === 15) {
+        return generateSection15PreCheck(task, command, input, tokens);
     } else if (section.id === 18) {
         return generateSection18PreCheck(input, tokens);
+    } else if (section.id === 19) {
+        return generateSection19PreCheck(task, command, input, tokens);
+    } else if (section.id === 20) {
+        return generateSection20PreCheck(task, command, input, tokens);
     }
     
     return null;

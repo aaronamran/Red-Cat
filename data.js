@@ -45,7 +45,9 @@ const sections = [
     section15Data, // Boot Process & Maintenance
     section16Data, // Rootless Containers
     section17Data, // Time Services
-    section18Data  // Flatpak
+    section18Data, // Flatpak
+    section19Data, // Root Password Reset
+    section20Data  // Root Password Reset (Bash Method)
 ];
 
 /**
@@ -219,7 +221,10 @@ const supportedCommands = [
     // Additional filesystem commands
     'mkfs.vfat',
     // Container and user session management
-    'loginctl'
+    'loginctl',
+    // Boot recovery
+    'reboot',
+    'exit'
 ];
 
 /**

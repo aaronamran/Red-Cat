@@ -229,14 +229,15 @@ const section15Data = {
             {
                 id: 10,
                 category: "Implementation",
-                description: "Reinstall GRUB2 to MBR after corruption.",
+                description: "Reinstall GRUB2 to MBR after corruption (Legacy BIOS).",
                 expected: [
                     { command: "grub2-install", requiredValues: ["/dev/sda"] }
                 ],
                 allowedPreChecks: [
-                    { command: "lsblk", requiredValues: [] }
+                    { command: "lsblk", requiredValues: [] },
+                    { command: "fdisk", requiredValues: ["-l"] }
                 ],
-                explanation: "Writes GRUB bootloader to disk MBR. Use device, not partition.",
+                explanation: "Installs the GRUB2 bootloader image to the boot sector of the specified disk. Note: For UEFI systems, RHEL prefers EFI executable management over this command.",
                 points: 4
             }
         ],
@@ -269,29 +270,7 @@ const section15Data = {
                 explanation: "Append 'systemd.unit=emergency.target' or just 'emergency' to kernel line.",
                 points: 3
             },
-            {
-                id: 3,
-                category: "Implementation",
-                description: "Boot with init=/bin/bash for password recovery.",
-                expected: [
-                    { command: "passwd", requiredValues: ["root"] }
-                ],
-                allowedPreChecks: [
-                    { command: "mount", requiredFlags: ["-o"], requiredValues: ["remount,rw", "/"] }
-                ],
-                explanation: "Bypasses systemd. Must remount / read-write, then touch /.autorelabel.",
-                points: 4
-            },
-            {
-                id: 4,
-                category: "Audit",
-                description: "Add rd.break to break at initramfs.",
-                expected: [
-                    { command: "chroot", requiredValues: ["/sysroot"] }
-                ],
-                explanation: "Drops to rescue shell before pivot to real root. Mount sysroot, chroot in.",
-                points: 4
-            },
+
             {
                 id: 5,
                 category: "Implementation",
@@ -596,20 +575,7 @@ const section15Data = {
         /* PHASE 2 - Boot Simulator
         // Set 6: Boot recovery procedures  
         , set6: [
-            {
-                id: 1,
-                category: "Implementation",
-                description: "Reset root password using rd.break method.",
-                expected: [
-                    { command: "passwd", requiredValues: ["root"] }
-                ],
-                allowedPreChecks: [
-                    { command: "mount", requiredValues: ["-o", "remount,rw", "/sysroot"] },
-                    { command: "chroot", requiredValues: ["/sysroot"] }
-                ],
-                explanation: "Add rd.break to kernel params, mount -o remount,rw /sysroot, chroot /sysroot, passwd, touch /.autorelabel",
-                points: 4
-            },
+            // Root password reset tasks moved to Section 19
             {
                 id: 2,
                 category: "Audit",
@@ -697,7 +663,7 @@ const section15Data = {
                     { command: "touch", requiredValues: ["/.autorelabel"] }
                 ],
                 allowedPreChecks: [],
-                explanation: "Required after password reset or context changes in rescue mode.",
+                explanation: "Required after password reset or context changes in rescue mode. See Section 19 for password reset tasks.",
                 points: 2
             },
             {

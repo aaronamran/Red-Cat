@@ -1,144 +1,154 @@
-/** Red Cat - Section 9 */
+/** Red Cat - Section 9: System Tuning & Analysis */
+
+// Profile per set
+const _s9profiles = { 1: 'throughput-performance', 2: 'virtual-guest', 3: 'balanced' };
 
 function generateSection9Output(command, input, tokens) {
-    // Task 1 & 3: List images
-    if (command === 'podman' && (input.includes('images') || (input.includes('image') && input.includes('ls')))) {
-        return 'REPOSITORY                 TAG         IMAGE ID      CREATED      SIZE\ndocker.io/library/nginx    latest      a1b2c3d4e5f6  2 weeks ago  187 MB';
+    const set = getQuestionSetForSection(appState.currentSectionId);
+    const profile = _s9profiles[set] || 'throughput-performance';
+    const progress = appState.sectionProgress[appState.currentSectionId];
+    const done = progress ? progress.completedTasks : [];
+
+    // dnf -y install tuned
+    if (command === 'dnf' && input.includes('install') && input.includes('tuned')) {
+        return 'Last metadata expiration check: 0:05:12 ago on Mon Apr  7 08:00:00 2026.\nDependencies resolved.\n================================================================================\n Package           Architecture  Version              Repository       Size\n================================================================================\nInstalling:\n tuned             noarch        2.21.0-1.el9         baseos           279 k\n\nTransaction Summary\n================================================================================\nInstall  1 Package\n\nTotal download size: 279 k\nInstalled size: 921 k\nDownloading Packages:\ntuned-2.21.0-1.el9.noarch.rpm               469 kB/s | 279 kB     00:00\n--------------------------------------------------------------------------------\nTotal                                        469 kB/s | 279 kB     00:00\nRunning transaction check\nTransaction check succeeded.\nRunning transaction test\nTransaction test succeeded.\nRunning transaction\n  Preparing        :                                                        1/1\n  Installing       : tuned-2.21.0-1.el9.noarch                             1/1\n  Running scriptlet: tuned-2.21.0-1.el9.noarch                             1/1\n  Verifying        : tuned-2.21.0-1.el9.noarch                             1/1\n\nInstalled:\n  tuned-2.21.0-1.el9.noarch\n\nComplete!';
     }
-    
-    // Task 5: List containers
-    if (command === 'podman' && input.includes('ps')) {
-        if (input.includes('-a')) {
-            return 'CONTAINER ID  IMAGE                           COMMAND               CREATED        STATUS                    PORTS                 NAMES\n1234567890ab  docker.io/library/nginx:latest  nginx -g daemon o...  5 minutes ago  Exited (0) 1 minute ago   0.0.0.0:8080->80/tcp  webserver';
+
+    // rpm -q tuned (check if installed)
+    if (command === 'rpm' && input.includes('-q') && input.includes('tuned')) {
+        return done.includes(1) ? 'tuned-2.21.0-1.el9.noarch' : 'package tuned is not installed';
+    }
+
+    // dnf list tuned
+    if (command === 'dnf' && input.includes('list') && input.includes('tuned')) {
+        return done.includes(1)
+            ? 'Installed Packages\ntuned.noarch   2.21.0-1.el9   @baseos'
+            : 'Available Packages\ntuned.noarch   2.21.0-1.el9   baseos';
+    }
+
+    // systemctl enable [--now] tuned
+    if (command === 'systemctl' && input.includes('enable') && input.includes('tuned')) {
+        return 'Created symlink /etc/systemd/system/multi-user.target.wants/tuned.service → /usr/lib/systemd/system/tuned.service.';
+    }
+
+    // systemctl start tuned
+    if (command === 'systemctl' && input.includes('start') && input.includes('tuned')) {
+        return null; // silent
+    }
+
+    // systemctl is-enabled tuned
+    if (command === 'systemctl' && input.includes('is-enabled') && input.includes('tuned')) {
+        return done.includes(2) ? 'enabled' : 'disabled';
+    }
+
+    // systemctl status tuned
+    if (command === 'systemctl' && input.includes('status') && input.includes('tuned')) {
+        const isRunning = done.includes(1) || done.includes(2);
+        return isRunning
+            ? `● tuned.service - Dynamic System Tuning Daemon\n   Loaded: loaded (/usr/lib/systemd/system/tuned.service; enabled; vendor preset: disabled)\n   Active: active (running) since Mon 2026-04-07 08:05:00 EST; 2h 20min ago\n Main PID: 1401 (tuned)\n   CGroup: /system.slice/tuned.service\n           └─1401 /usr/bin/python3 -Es /usr/sbin/tuned -l -P`
+            : `● tuned.service - Dynamic System Tuning Daemon\n   Loaded: loaded (/usr/lib/systemd/system/tuned.service; disabled; vendor preset: disabled)\n   Active: inactive (dead)`;
+    }
+
+    // tuned-adm list
+    if (command === 'tuned-adm' && input.includes('list')) {
+        return 'Available profiles:\n- accelerator-performance     - Throughput performance based tuning with disabled higher latency STOP states\n- balanced                     - General non-specialized tuned profile\n- desktop                      - Optimize for the desktop use-case\n- hpc-compute                  - Optimize for HPC compute workloads\n- intel-sst                    - Configure for Intel Speed Select Base Frequency\n- latency-performance          - Optimize for deterministic performance at the cost of increased power consumption\n- network-latency              - Optimize for deterministic performance at the cost of increased power consumption, focused on low latency network performance\n- network-throughput           - Optimize for streaming network throughput, generally only necessary on older CPUs or 40G+ networks\n- optimize-serial-console      - Optimize for serial console use\n- powersave                    - A placeholder\n- throughput-performance       - Broadly applicable tuning that provides excellent performance across a variety of common server workloads\n- virtual-guest                - Optimize the settings for the virtual guest\n- virtual-host                 - Optimize the settings for the virtual host\nCurrent active profile: ' + (done.includes(4) ? profile : 'balanced');
+    }
+
+    // tuned-adm active
+    if (command === 'tuned-adm' && input.includes('active')) {
+        return `Current active profile: ${done.includes(4) ? profile : 'balanced'}`;
+    }
+
+    // tuned-adm profile <name>
+    if (command === 'tuned-adm' && input.includes('profile') && !input.includes('active')) {
+        const targetProfile = tokens[2] || profile;
+        return `Switching to profile '${targetProfile}'\nSwitched to profile '${targetProfile}'`;
+    }
+
+    // tuned-adm recommend
+    if (command === 'tuned-adm' && input.includes('recommend')) {
+        return 'virtual-guest';
+    }
+
+    // mkdir /var/log/journal
+    if (command === 'mkdir' && input.includes('/var/log/journal')) {
+        return null; // silent success
+    }
+
+    // ls -ld /var/log/journal
+    if (command === 'ls' && input.includes('/var/log/journal')) {
+        if (!done.includes(6)) {
+            return 'ls: cannot access \'/var/log/journal\': No such file or directory';
         }
-        return 'CONTAINER ID  IMAGE                           COMMAND               CREATED        STATUS        PORTS                 NAMES\n1234567890ab  docker.io/library/nginx:latest  nginx -g daemon o...  5 minutes ago  Up 5 minutes  0.0.0.0:8080->80/tcp  webserver';
+        return 'drwxr-sr-x. 2 root systemd-journal 4096 Apr  7 10:20 /var/log/journal';
     }
-    
-    if (command === 'podman' && input.includes('container') && input.includes('ls')) {
-        return 'CONTAINER ID  IMAGE                           COMMAND               CREATED        STATUS        PORTS                 NAMES\n1234567890ab  docker.io/library/nginx:latest  nginx -g daemon o...  5 minutes ago  Up 5 minutes  0.0.0.0:8080->80/tcp  webserver';
+
+    // journalctl --disk-usage
+    if (command === 'journalctl' && input.includes('--disk-usage')) {
+        return 'Archived and active journals take up 144.0M in the file system.';
     }
-    
-    // Task 7: List stopped containers
-    if (command === 'podman' && input.includes('ps') && input.includes('-a')) {
-        return 'CONTAINER ID  IMAGE                           COMMAND               CREATED        STATUS                    PORTS                 NAMES\n1234567890ab  docker.io/library/nginx:latest  nginx -g daemon o...  10 minutes ago  Exited (0) 2 minutes ago  0.0.0.0:8080->80/tcp  webserver';
+
+    // journalctl -p err
+    if (command === 'journalctl' && (input.includes('-p') || input.includes('--priority'))) {
+        return '-- Logs begin at Mon 2026-04-07 08:00:00 EST, end at Mon 2026-04-07 10:30:00 EST. --\nApr 07 08:01:15 localhost kernel: ACPI BIOS Error (bug): AE_NOT_FOUND\nApr 07 08:01:17 localhost NetworkManager[965]: [ERR] Could not find device enp0s3\nApr 07 09:45:22 localhost sssd[1321]: [ERR] Failed to read configuration file';
     }
-    
-    // Task 6 (set1) & Task 3 (set2): Inspect container/image
-    if (command === 'podman' && input.includes('inspect')) {
-        if (input.includes('nginx:alpine') || input.includes('nginx') && !input.includes('webapp') && !input.includes('webserver')) {
-            return '[\n    {\n        "Id": "a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890",\n        "Digest": "sha256:fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",\n        "RepoTags": [\n            "docker.io/library/nginx:alpine"\n        ],\n        "RepoDigests": [\n            "docker.io/library/nginx@sha256:fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210"\n        ],\n        "Parent": "",\n        "Comment": "",\n        "Created": "2026-02-09T10:15:32.123456789Z",\n        "Container": "",\n        "Config": {\n            "Hostname": "",\n            "Domainname": "",\n            "User": "",\n            "Env": [\n                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",\n                "NGINX_VERSION=1.25.3"\n            ],\n            "Cmd": [\n                "nginx",\n                "-g",\n                "daemon off;"\n            ],\n            "Image": "sha256:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",\n            "Volumes": null,\n            "WorkingDir": "",\n            "Entrypoint": [\n                "/docker-entrypoint.sh"\n            ],\n            "Labels": {\n                "maintainer": "NGINX Docker Maintainers <docker-maint@nginx.com>"\n            },\n            "StopSignal": "SIGQUIT"\n        },\n        "Architecture": "amd64",\n        "Os": "linux",\n        "Size": 41234567,\n        "VirtualSize": 41234567,\n        "GraphDriver": {\n            "Name": "overlay",\n            "Data": {\n                "UpperDir": "/var/lib/containers/storage/overlay/abc123/diff",\n                "WorkDir": "/var/lib/containers/storage/overlay/abc123/work"\n            }\n        },\n        "RootFS": {\n            "Type": "layers",\n            "Layers": [\n                "sha256:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",\n                "sha256:fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",\n                "sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"\n            ]\n        }\n    }\n]';
-        }
-        // Container inspect (webapp or webserver)
-        return '[\n    {\n        "Id": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",\n        "Created": "2026-02-23T10:15:32.123456789-05:00",\n        "Path": "nginx",\n        "Args": [\n            "-g",\n            "daemon off;"\n        ],\n        "State": {\n            "Status": "running",\n            "Running": true,\n            "Paused": false,\n            "Restarting": false,\n            "OOMKilled": false,\n            "Dead": false,\n            "Pid": 5678,\n            "ExitCode": 0,\n            "StartedAt": "2026-02-23T10:15:33.456789012-05:00",\n            "FinishedAt": "0001-01-01T00:00:00Z"\n        },\n        "Image": "a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890",\n        "Name": "webserver",\n        "RestartCount": 0,\n        "Driver": "overlay",\n        "Platform": "linux",\n        "HostConfig": {\n            "NetworkMode": "bridge",\n            "PortBindings": {\n                "80/tcp": [\n                    {\n                        "HostIp": "0.0.0.0",\n                        "HostPort": "8080"\n                    }\n                ]\n            },\n            "RestartPolicy": {\n                "Name": "no",\n                "MaximumRetryCount": 0\n            }\n        },\n        "Config": {\n            "Hostname": "1234567890ab",\n            "Env": [\n                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",\n                "NGINX_VERSION=1.25.3"\n            ],\n            "Cmd": [\n                "nginx",\n                "-g",\n                "daemon off;"\n            ],\n            "Image": "docker.io/library/nginx:latest",\n            "WorkingDir": ""\n        },\n        "NetworkSettings": {\n            "Bridge": "",\n            "Gateway": "10.88.0.1",\n            "IPAddress": "10.88.0.15",\n            "IPPrefixLen": 16,\n            "MacAddress": "02:42:0a:58:00:0f",\n            "Networks": {\n                "bridge": {\n                    "Gateway": "10.88.0.1",\n                    "IPAddress": "10.88.0.15",\n                    "IPPrefixLen": 16,\n                    "MacAddress": "02:42:0a:58:00:0f"\n                }\n            },\n            "Ports": {\n                "80/tcp": [\n                    {\n                        "HostIp": "0.0.0.0",\n                        "HostPort": "8080"\n                    }\n                ]\n            }\n        },\n        "Mounts": []\n    }\n]';
+
+    // journalctl -u sshd
+    if (command === 'journalctl' && (input.includes('-u') || input.includes('--unit'))) {
+        return '-- Logs begin at Mon 2026-04-07 08:00:00 EST, end at Mon 2026-04-07 10:30:00 EST. --\nApr 07 08:00:02 localhost systemd[1]: Starting OpenSSH server daemon...\nApr 07 08:00:02 localhost sshd[1098]: Server listening on 0.0.0.0 port 22.\nApr 07 08:00:02 localhost sshd[1098]: Server listening on :: port 22.\nApr 07 08:00:02 localhost systemd[1]: Started OpenSSH server daemon.\nApr 07 09:15:30 localhost sshd[3421]: Accepted publickey for root from 192.168.1.10 port 54321 ssh2';
     }
-    
-    // Task 5 (set2): Show container logs
-    if (command === 'podman' && input.includes('logs')) {
-        return '/docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration\n/docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/\n/docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh\n10-listen-on-ipv6-by-default.sh: info: Getting the checksum of /etc/nginx/conf.d/default.conf\n10-listen-on-ipv6-by-default.sh: info: Enabled listen on IPv6 in /etc/nginx/conf.d/default.conf\n/docker-entrypoint.sh: Sourcing /docker-entrypoint.d/15-local-resolvers.envsh\n/docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh\n/docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh\n/docker-entrypoint.sh: Configuration complete; ready for start up\n2026/02/23 15:15:33 [notice] 1#1: using the "epoll" event method\n2026/02/23 15:15:33 [notice] 1#1: nginx/1.25.3\n2026/02/23 15:15:33 [notice] 1#1: built by gcc 12.2.1 20220924 (Alpine 12.2.1_git20220924-r10) \n2026/02/23 15:15:33 [notice] 1#1: OS: Linux 5.14.0-362.el9.x86_64\n2026/02/23 15:15:33 [notice] 1#1: getrlimit(RLIMIT_NOFILE): 1048576:1048576\n2026/02/23 15:15:33 [notice] 1#1: start worker processes\n2026/02/23 15:15:33 [notice] 1#1: start worker process 29\n192.168.1.10 - - [23/Feb/2026:15:16:45 +0000] "GET / HTTP/1.1" 200 615 "-" "curl/7.76.1" "-"\n192.168.1.10 - - [23/Feb/2026:15:17:12 +0000] "GET /index.html HTTP/1.1" 200 615 "-" "Mozilla/5.0" "-"';
+
+    // journalctl --since yesterday
+    if (command === 'journalctl' && (input.includes('--since') || input.includes('yesterday'))) {
+        return '-- Logs begin at Sun 2026-04-06 08:00:00 EST, end at Mon 2026-04-07 10:30:00 EST. --\nApr 06 08:00:01 localhost systemd[1]: Starting system initialization...\nApr 06 08:00:05 localhost kernel: Linux version 5.14.0-362.el9.x86_64\nApr 06 12:30:00 localhost crond[8851]: (student) CMD (/home/student/scripts/backup.sh)\nApr 06 23:59:59 localhost systemd[1]: Stopping system...\nApr 07 08:00:01 localhost systemd[1]: Starting system initialization...';
     }
-    
-    // podman run (Implementation tasks) - returns container ID
-    if (command === 'podman' && input.includes('run')) {
-        if (input.includes('-d')) {
-            // Detached mode returns just container ID
-            return '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
-        }
-        // Interactive mode would show container output, but we'll return ID for simplicity
-        return '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
+
+    // journalctl -n 50 -f
+    if (command === 'journalctl' && (input.includes('-n') || input.includes('-f'))) {
+        return '-- Logs begin at Mon 2026-04-07 08:00:00 EST, end at Mon 2026-04-07 10:30:00 EST. --\nApr 07 10:28:01 localhost crond[9301]: (root) CMD (run-parts /etc/cron.hourly)\nApr 07 10:28:15 localhost sshd[3501]: Accepted publickey for root from 192.168.1.10\nApr 07 10:29:00 localhost NetworkManager[965]: Connectivity is now \'full\'\nApr 07 10:29:30 localhost systemd[1]: tuned.service: Scheduled restart job\nApr 07 10:30:00 localhost kernel: NET: Registered PF_UNIX/PF_LOCAL protocol family';
     }
-    
-    // podman pull (Implementation tasks) - shows download progress
-    if (command === 'podman' && input.includes('pull')) {
-        if (input.includes('nginx')) {
-            return 'Trying to pull docker.io/library/nginx:latest...\nGetting image source signatures\nCopying blob sha256:a1b2c3d4e5f6...\nCopying blob sha256:fedcba987654...\nCopying blob sha256:112233445566...\nCopying config sha256:a1b2c3d4e5f6...\nWriting manifest to image destination\nStoring signatures\nsha256:a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890';
-        }
-        if (input.includes('httpd')) {
-            return 'Trying to pull docker.io/library/httpd:latest...\nGetting image source signatures\nCopying blob sha256:abc123def456...\nCopying blob sha256:789012ghi345...\nCopying config sha256:fedcba987654...\nWriting manifest to image destination\nStoring signatures\nsha256:fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210';
-        }
-        return 'Trying to pull image...\nGetting image source signatures\nCopying blob...\nCopying config...\nWriting manifest to image destination\nStoring signatures';
+
+    // generic journalctl
+    if (command === 'journalctl') {
+        return '-- Logs begin at Mon 2026-04-07 08:00:00 EST, end at Mon 2026-04-07 10:30:00 EST. --\nApr 07 08:00:00 localhost systemd-journal[211]: Runtime Journal\nApr 07 08:00:01 localhost systemd[1]: Starting system initialization...\nApr 07 08:00:05 localhost kernel: Linux version 5.14.0-362.el9.x86_64';
     }
-    
-    // podman stop/start/restart (Implementation tasks) - returns container ID
-    if (command === 'podman' && (input.includes('stop') || input.includes('start') || input.includes('restart'))) {
-        if (input.includes('webserver')) {
-            return 'webserver';
-        }
-        if (input.includes('webapp')) {
-            return 'webapp';
-        }
-        return '1234567890ab'; // Returns first 12 chars of container ID
-    }
-    
-    // podman rm/rmi (Implementation tasks) - returns container/image ID
-    if (command === 'podman' && (input.includes(' rm ') || input.includes(' rmi '))) {
-        if (input.includes('webserver')) {
-            return '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
-        }
-        if (input.includes('webapp')) {
-            return '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
-        }
-        if (input.includes('nginx')) {
-            return 'Untagged: docker.io/library/nginx:latest\nDeleted: sha256:a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890';
-        }
-        return 'Deleted';
-    }
-    
-    // podman generate systemd (Implementation task)
-    if (command === 'podman' && input.includes('generate') && input.includes('systemd')) {
-        return '# container-webserver.service\n# autogenerated by Podman 4.6.1\n# Sun Feb 23 10:15:32 EST 2026\n\n[Unit]\nDescription=Podman container-webserver.service\nDocumentation=man:podman-generate-systemd(1)\nWants=network-online.target\nAfter=network-online.target\nRequiresMountsFor=%t/containers\n\n[Service]\nEnvironment=PODMAN_SYSTEMD_UNIT=%n\nRestart=on-failure\nTimeoutStopSec=70\nExecStart=/usr/bin/podman start webserver\nExecStop=/usr/bin/podman stop -t 10 webserver\nExecStopPost=/usr/bin/podman rm -f webserver\nPIDFile=%t/containers/container-webserver.pid\nType=forking\n\n[Install]\nWantedBy=default.target';
-    }
-    
+
     return null;
 }
 
-/**
- * Section 10: Remote Resources - Output Generator
- */
 function generateSection9PreCheck(task, command, input, tokens) {
-    // Task 1 Pre-check: No images yet
-    if (task.id === 1) {
-        if (command === 'podman' && (input.includes('images') || (input.includes('image') && input.includes('ls')))) {
-            return 'REPOSITORY  TAG  IMAGE ID  CREATED  SIZE';
-        }
+    const set = getQuestionSetForSection(appState.currentSectionId);
+    const profile = _s9profiles[set] || 'throughput-performance';
+
+    // pre-check: rpm -q tuned before installing
+    if (command === 'rpm' && input.includes('-q') && input.includes('tuned')) {
+        return 'package tuned is not installed';
     }
-    
-    // Task 2 Pre-check: nginx not pulled yet
-    if (task.id === 2) {
-        if (command === 'podman' && (input.includes('images') || (input.includes('image') && input.includes('ls')))) {
-            return 'REPOSITORY  TAG  IMAGE ID  CREATED  SIZE';
-        }
+
+    // pre-check: systemctl status tuned before enable
+    if (command === 'systemctl' && input.includes('status') && input.includes('tuned')) {
+        return '● tuned.service - Dynamic System Tuning Daemon\n   Loaded: loaded (/usr/lib/systemd/system/tuned.service; disabled; vendor preset: disabled)\n   Active: inactive (dead)';
     }
-    
-    // Task 4 Pre-check: No containers running yet
-    if (task.id === 4) {
-        if (command === 'podman' && input.includes('ps')) {
-            if (input.includes('-a')) {
-                return 'CONTAINER ID  IMAGE  COMMAND  CREATED  STATUS  PORTS  NAMES';
-            }
-            return 'CONTAINER ID  IMAGE  COMMAND  CREATED  STATUS  PORTS  NAMES';
-        }
+
+    // pre-check: is-enabled before enable
+    if (command === 'systemctl' && input.includes('is-enabled') && input.includes('tuned')) {
+        return 'disabled';
     }
-    
-    // Task 6 Pre-check: Container running (before stop)
-    if (task.id === 6) {
-        if (command === 'podman' && input.includes('ps')) {
-            if (input.includes('-a')) {
-                return 'CONTAINER ID  IMAGE                           COMMAND               CREATED        STATUS        PORTS                 NAMES\n1234567890ab  docker.io/library/nginx:latest  nginx -g daemon o...  5 minutes ago  Up 5 minutes  0.0.0.0:8080->80/tcp  webserver';
-            }
-            return 'CONTAINER ID  IMAGE                           COMMAND               CREATED        STATUS        PORTS                 NAMES\n1234567890ab  docker.io/library/nginx:latest  nginx -g daemon o...  5 minutes ago  Up 5 minutes  0.0.0.0:8080->80/tcp  webserver';
-        }
+
+    // pre-check: active profile before switching
+    if (command === 'tuned-adm' && input.includes('active')) {
+        return 'Current active profile: balanced';
     }
-    
-    // Task 8 Pre-check: Container exists (before remove)
-    if (task.id === 8) {
-        if (command === 'podman' && input.includes('ps') && input.includes('-a')) {
-            return 'CONTAINER ID  IMAGE                           COMMAND               CREATED        STATUS                    PORTS                 NAMES\n1234567890ab  docker.io/library/nginx:latest  nginx -g daemon o...  10 minutes ago  Exited (0) 2 minutes ago  0.0.0.0:8080->80/tcp  webserver';
-        }
+
+    // pre-check: ls /var/log/journal (not created yet)
+    if (command === 'ls' && input.includes('/var/log/journal')) {
+        return "ls: cannot access '/var/log/journal': No such file or directory";
     }
-    
+
+    // pre-check: disk-usage before mkdir
+    if (command === 'journalctl' && input.includes('--disk-usage')) {
+        return 'Archived and active journals take up 8.0M in the file system.';
+    }
+
     return null;
 }
-
-/**
- * Section 10: Remote Resources - Pre-Check Generator
- */

@@ -39,30 +39,38 @@ Open `index.html` in your browser - this is the main entry point with practice m
 4. Get instant feedback on your command structure
 5. Progress unlocks as you complete tasks
 
-## 📚 Comprehensive RHCSA Coverage - 15 Sections
+## 📚 Comprehensive RHCSA Coverage - 19 Sections
 
-**~700+ practice tasks** across all major RHCSA exam objectives, each with 6 unique question sets for variety:
+**~700+ practice tasks** across all major RHCSA exam objectives, each with multiple unique question sets for variety:
 
 ### Core System Administration
-1. **Users and Groups** - User/group management, sudo, privileged access
-2. **Permissions and ACLs** - File permissions, ACLs, umask, links
-3. **Storage and Partitioning** - Partitions, LVM (PV, VG, LV), mount management
-4. **Essential Tools** - grep, find, tar, text editors, system documentation
-5. **Running Systems** - Process management, systemd services, tuned profiles
-6. **File Systems** - XFS/ext4, mounting, swap, autofs, quotas
+1. **Essential Tools** - grep, find, tar, text editors, system documentation
+2. **Users and Groups** - User/group management, sudo, privileged access
+3. **Permissions and ACLs** - File permissions, ACLs, umask, links
+4. **Shell Scripting** - Bash fundamentals, conditionals, loops, functions, I/O
+5. **Storage: Partitions & LVM** - Partitions, LVM (PV, VG, LV), disk management
+6. **Storage: File Systems** - XFS/ext4, mounting, swap, autofs, quotas
+7. **Remote Resources** - NFS, autofs for network shares, fstab options
 
-### Package & Network Management
-7. **Systems Maintenance** - DNF/YUM, repositories, RPM, system updates
-8. **Networking** - NetworkManager, firewall, SSH, secure file transfer
-9. **Containers** - Podman basics, volumes, systemd integration
-10. **Remote Resources** - NFS, autofs for network shares, fstab options
+### Process & Service Management
+8. **Systemd & Processes** - Process management, systemd services, service control
+9. **System Tuning & Analysis** - Performance tuning, resource analysis, optimization
+10. **Task Scheduling** - cron, anacron, at/batch, systemd timers
 
-### Security & Advanced Topics
-11. **SELinux Security** - Modes, contexts, booleans, troubleshooting, port management
-12. **Shell Scripting** - Bash fundamentals, conditionals, loops, functions, I/O
-13. **Task Scheduling** - cron, anacron, at/batch, systemd timers
-14. **Boot Process & GRUB** - systemd targets, GRUB2, kernel management, recovery
-15. **Time & Date Services** - timedatectl, chronyd/NTP, time zones, synchronization
+### Networking & Security
+11. **Networking** - NetworkManager, interface configuration, network basics
+12. **Network Security** - Firewalld, firewall rules, ports, zones
+13. **SELinux Security** - Modes, contexts, booleans, troubleshooting, port management
+
+### Package & Container Management
+14. **Software Management** - DNF/YUM, repositories, RPM, system updates
+15. **Rootless Containers** - Podman basics, volumes, systemd integration
+16. **Flatpak** - Flatpak remotes, application installation, permissions (RHEL 10)
+
+### Boot & Recovery
+17. **Time Services** - timedatectl, chronyd/NTP, time zones, synchronization
+18. **Boot Process & Maintenance** - systemd targets, GRUB2, kernel management
+19. **Root Password Reset** - Emergency recovery procedures, rd.break method
 
 **📊 Coverage Estimate**: ~95% of RHCSA EX200 exam objectives
 

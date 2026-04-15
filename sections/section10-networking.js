@@ -392,7 +392,7 @@ const section10Data = {
                 category: "Implementation",
                 description: "Delete the network connection named 'Wired connection 1'",
                 expected: [
-                    { command: "nmcli", requiredValues: ["connection", "delete", "\"Wired connection 1\""] },
+                    { command: "nmcli", requiredValues: ["connection", "delete", "'Wired connection 1'"] },
                     { command: "nmcli", requiredValues: ["con", "del", "'Wired connection 1'"] }
                 ],
                 allowedPreChecks: [

@@ -1,140 +1,115 @@
-/** Red Cat - Section 11 */
+/** Red Cat - Section 11: Network Security */
 
 function generateSection11Output(command, input, tokens) {
-    // SELinux status and mode
-    if (command === 'getenforce') {
-        return 'Enforcing';
+    // firewall-cmd --get-active-zones
+    if (command === 'firewall-cmd' && input.includes('--get-active-zones')) {
+        return 'public\n  interfaces: ens160';
     }
-    
-    if (command === 'sestatus') {
-        return 'SELinux status:                 enabled\nSELinuxfs mount:                /sys/fs/selinux\nSELinux root directory:         /etc/selinux\nLoaded policy name:             targeted\nCurrent mode:                   enforcing\nMode from config file:          enforcing\nPolicy MLS status:              enabled\nPolicy deny_unknown status:     allowed\nMemory protection checking:     actual (secure)\nMax kernel policy version:      33';
+
+    // firewall-cmd --get-default-zone
+    if (command === 'firewall-cmd' && input.includes('--get-default-zone')) {
+        return 'public';
     }
-    
-    // SELinux contexts
-    if (command === 'ls' && input.includes('-Z')) {
-        if (input.includes('/var/www/html')) {
-            return 'unconfined_u:object_r:httpd_sys_content_t:s0 index.html\nunconfined_u:object_r:httpd_sys_content_t:s0 app.php';
-        }
-        if (input.includes('/tmp')) {
-            return 'unconfined_u:object_r:user_tmp_t:s0 file1.txt\nunconfined_u:object_r:user_tmp_t:s0 file2.txt';
-        }
+
+    // firewall-cmd --set-default-zone
+    if (command === 'firewall-cmd' && input.includes('--set-default-zone')) {
+        return 'success';
     }
-    
-    if (command === 'stat' && input.includes('/var/www/html')) {
-        return '  File: /var/www/html\n  Size: 4096      \tBlocks: 8          IO Block: 4096   directory\nDevice: fd00h/64768d\tInode: 67890      Links: 2\nAccess: (0755/drwxr-xr-x)  Uid: (    0/    root)   Gid: (    0/    root)\nContext: system_u:object_r:httpd_sys_content_t:s0\nAccess: 2026-02-23 12:00:00.000000000 -0500\nModify: 2026-02-23 12:00:00.000000000 -0500\nChange: 2026-02-23 12:00:00.000000000 -0500\n Birth: -';
+
+    // firewall-cmd --list-all
+    if (command === 'firewall-cmd' && input.includes('--list-all')) {
+        const progress = appState.sectionProgress[appState.currentSectionId];
+        const done = progress ? progress.completedTasks : [];
+        const hasHttp = done.includes(3);
+        const hasHttps = done.includes(5);
+        const has8080 = done.includes(6);
+        const services = ['cockpit', 'dhcpv6-client', 'ssh', hasHttp ? 'http' : null, hasHttps ? 'https' : null].filter(Boolean).join(' ');
+        const ports = has8080 ? '8080/tcp' : '';
+        return `public (active)\n  target: default\n  icmp-block-inversion: no\n  interfaces: ens160\n  sources: \n  services: ${services}\n  ports: ${ports}\n  protocols: \n  forward: yes\n  masquerade: no\n  forward-ports: \n  source-ports: \n  icmp-blocks: \n  rich rules:`;
     }
-    
-    // SELinux booleans
-    if (command === 'getsebool') {
-        if (input.includes('-a')) {
-            return 'httpd_can_network_connect --> off\nhttpd_enable_homedirs --> off\nhttpd_use_nfs --> off\nftpd_anon_write --> off\nftpd_full_access --> on';
-        }
-        if (input.includes('httpd_can_network_connect')) {
-            return 'httpd_can_network_connect --> on';
-        }
-        if (input.includes('httpd_enable_homedirs')) {
-            return 'httpd_enable_homedirs --> on';
-        }
-        if (input.includes('ftpd_anon_write')) {
-            return 'ftpd_anon_write --> off';
-        }
+
+    // firewall-cmd --list-services
+    if (command === 'firewall-cmd' && input.includes('--list-services')) {
+        const progress = appState.sectionProgress[appState.currentSectionId];
+        const done = progress ? progress.completedTasks : [];
+        const hasHttp = done.includes(3);
+        const hasHttps = done.includes(5);
+        return ['cockpit', 'dhcpv6-client', 'ssh', hasHttp ? 'http' : null, hasHttps ? 'https' : null].filter(Boolean).join(' ');
     }
-    
-    if (command === 'semanage' && input.includes('boolean')) {
-        return 'SELinux boolean                State  Default Description\nhttpd_can_network_connect      (on   ,   on)  Allow httpd to make network connections\nhttpd_enable_homedirs          (on   ,  off)  Allow httpd to read home directories\nhttpd_use_nfs                  (off  ,  off)  Allow httpd to access NFS file systems\nftpd_anon_write                (off  ,  off)  Allow ftp servers to upload files\nftpd_full_access               (on   ,  off)  Allow ftp servers full access';
+
+    // firewall-cmd --list-ports
+    if (command === 'firewall-cmd' && input.includes('--list-ports')) {
+        const progress = appState.sectionProgress[appState.currentSectionId];
+        const done = progress ? progress.completedTasks : [];
+        return done.includes(6) ? '8080/tcp' : '';
     }
-    
-    // SELinux ports
-    if (command === 'semanage' && input.includes('port')) {
-        if (input.includes('-a') || input.includes('--add')) {
-            return ''; // Silent success for semanage port -a
+
+    // firewall-cmd --add-service
+    if (command === 'firewall-cmd' && input.includes('--add-service')) {
+        return 'success';
+    }
+
+    // firewall-cmd --remove-service
+    if (command === 'firewall-cmd' && input.includes('--remove-service')) {
+        return 'success';
+    }
+
+    // firewall-cmd --add-port
+    if (command === 'firewall-cmd' && input.includes('--add-port')) {
+        return 'success';
+    }
+
+    // firewall-cmd --remove-port
+    if (command === 'firewall-cmd' && input.includes('--remove-port')) {
+        return 'success';
+    }
+
+    // firewall-cmd --reload
+    if (command === 'firewall-cmd' && input.includes('--reload')) {
+        return 'success';
+    }
+
+    // firewall-cmd --add-rich-rule / --list-rich-rules / --remove-rich-rule
+    if (command === 'firewall-cmd' && input.includes('rich-rule')) {
+        if (input.includes('--list-rich-rules')) {
+            return 'rule family="ipv4" source address="192.168.2.0/24" service name="ssh" accept';
         }
-        if (input.includes('-d') || input.includes('--delete')) {
-            return ''; // Silent success for semanage port -d
-        }
-        if (input.includes('http')) {
-            return 'SELinux Port Type              Proto    Port Number\n\nhttp_port_t                    tcp      80, 443, 488, 8008, 8009, 8080, 8443, 9000';
-        }
-        if (input.includes('ssh')) {
-            return 'SELinux Port Type              Proto    Port Number\n\nssh_port_t                     tcp      22, 2222';
-        }
-        if (input.includes('-l') && input.includes('-C')) {
-            return 'SELinux Port Type              Proto    Port Number\n\nhttp_port_t                    tcp      8080\nssh_port_t                     tcp      2222';
-        }
-        if (input.includes('8080')) {
-            return 'http_port_t                    tcp      8080';
-        }
+        return 'success';
     }
-    
-    // SELinux modification commands (Implementation tasks)
-    if (command === 'setsebool') {
-        if (input.includes('-P')) {
-            return ''; // Silent success for setsebool -P
-        }
-        return ''; // Silent success
+
+    // systemctl status firewalld
+    if (command === 'systemctl' && input.includes('status') && input.includes('firewalld')) {
+        return '● firewalld.service - firewalld - dynamic firewall daemon\n   Loaded: loaded (/usr/lib/systemd/system/firewalld.service; enabled; vendor preset: enabled)\n   Active: active (running) since Mon 2026-04-07 08:00:00 EST; 2h 15min ago\n     Docs: man:firewalld(1)\n Main PID: 1090 (firewalld)\n   CGroup: /system.slice/firewalld.service\n           └─1090 /usr/bin/python3 -s /usr/sbin/firewalld --nofork --nopid';
     }
-    
-    if (command === 'semanage' && input.includes('fcontext')) {
-        if (input.includes('-a') || input.includes('--add')) {
-            return ''; // Silent success
-        }
-        if (input.includes('-d') || input.includes('--delete')) {
-            return ''; // Silent success
-        }
+
+    // systemctl enable/start/stop/restart firewalld
+    if (command === 'systemctl' && input.includes('firewalld')) {
+        return null; // silent success
     }
-    
-    if (command === 'restorecon') {
-        if (input.includes('-v')) {
-            if (input.includes('/var/www/html')) {
-                return 'Relabeled /var/www/html/index.html from unconfined_u:object_r:user_home_t:s0 to unconfined_u:object_r:httpd_sys_content_t:s0';
-            }
-            return 'Relabeled file from unconfined_u:object_r:user_tmp_t:s0 to system_u:object_r:httpd_sys_content_t:s0';
-        }
-        return ''; // Silent without -v
-    }
-    
-    if (command === 'chcon') {
-        return ''; // Silent success
-    }
-    
-    // SELinux file contexts  
-    if (command === 'matchpathcon') {
-        if (input.includes('/var/www/html')) {
-            return '/var/www/html\tsystem_u:object_r:httpd_sys_content_t:s0';
-        }
-    }
-    
-    if (command === 'ausearch') {
-        if (input.includes('avc')) {
-            return '----\ntime->Sun Feb 23 12:00:00 2026\ntype=AVC msg=audit(1708704000.123:456): avc:  denied  { write } for  pid=1234 comm="httpd" name="index.html" dev="sda1" ino=67890 scontext=system_u:system_r:httpd_t:s0 tcontext=system_u:object_r:user_home_t:s0 tclass=file permissive=0';
-        }
-    }
-    
-    if (command === 'grep' && input.includes('denied') && input.includes('/var/log/audit/audit.log')) {
-        return 'type=AVC msg=audit(1708704000.123:456): avc:  denied  { write } for  pid=1234 comm="httpd" name="index.html" dev="sda1" ino=67890 scontext=system_u:system_r:httpd_t:s0 tcontext=system_u:object_r:user_home_t:s0 tclass=file permissive=0';
-    }
-    
-    // SELinux user mappings
-    if (command === 'semanage' && input.includes('login')) {
-        return 'Login Name           SELinux User         MLS/MCS Range        Service\n\n__default__          unconfined_u         s0-s0:c0.c1023       *\njohn                 staff_u              s0-s0:c0.c1023       *\nroot                 unconfined_u         s0-s0:c0.c1023       *';
-    }
-    
-    if (command === 'semanage' && input.includes('user')) {
-        return '                Labeling   MLS/       MLS/                          \nSELinux User    Prefix     MCS Level  MCS Range                      SELinux Roles\n\nguest_u         user       s0         s0                             guest_r\nroot            user       s0         s0-s0:c0.c1023                 staff_r sysadm_r system_r unconfined_r\nstaff_u         user       s0         s0-s0:c0.c1023                 staff_r sysadm_r system_r unconfined_r\nunconfined_u    user       s0         s0-s0:c0.c1023                 system_r unconfined_r\nuser_u          user       s0         s0                             user_r';
-    }
-    
-    // SELinux modules
-    if (command === 'semodule' && input.includes('-l')) {
-        return 'abrt\t1.7.1\napache\t3.14.3\nauthlogin\t3.14.3\nbase\t3.14.3\nchronyd\t3.14.3\ncontainer\t3.14.3\ncron\t3.14.3\nfirewalld\t3.14.3\nhttpd\t3.14.3\nmysql\t3.14.3\npostfix\t3.14.3\nssh\t3.14.3';
-    }
-    
-    if (command === 'ps' && (input.includes('auxZ') || input.includes('-eZ'))) {
-        return 'LABEL                               USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND\nsystem_u:system_r:httpd_t:s0        apache      1234  0.0  0.5 224080  5456 ?        Ss   08:15   0:02 /usr/sbin/httpd -DFOREGROUND\nsystem_u:system_r:sshd_t:s0-s0:c0.c1023 root     1145  0.0  0.2 112860  2548 ?    Ss   08:15   0:00 /usr/sbin/sshd -D';
-    }
-    
+
     return null;
 }
 
-/**
- * Section 12: Shell Scripting - Output Generator
- */
+function generateSection11PreCheck(task, command, input, tokens) {
+    // Task 3: HTTP not in firewall yet
+    if (task.id === 3) {
+        if (command === 'firewall-cmd' && input.includes('--list-all')) {
+            return 'public (active)\n  target: default\n  icmp-block-inversion: no\n  interfaces: ens160\n  sources: \n  services: cockpit dhcpv6-client ssh\n  ports: \n  protocols: \n  forward: yes\n  masquerade: no\n  forward-ports: \n  source-ports: \n  icmp-blocks: \n  rich rules:';
+        }
+        if (command === 'firewall-cmd' && input.includes('--list-services')) {
+            return 'cockpit dhcpv6-client ssh';
+        }
+    }
+
+    // Task 6: port 8080 not added yet
+    if (task.id === 6) {
+        if (command === 'firewall-cmd' && input.includes('--list-all')) {
+            return 'public (active)\n  target: default\n  icmp-block-inversion: no\n  interfaces: ens160\n  sources: \n  services: cockpit dhcpv6-client http ssh\n  ports: \n  protocols: \n  forward: yes\n  masquerade: no\n  forward-ports: \n  source-ports: \n  icmp-blocks: \n  rich rules:';
+        }
+        if (command === 'firewall-cmd' && input.includes('--list-ports')) {
+            return '';
+        }
+    }
+
+    return null;
+}

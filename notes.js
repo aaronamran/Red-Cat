@@ -913,30 +913,29 @@ firewall-cmd --reload</code></pre>
     15: {
         title: "Boot Process & Maintenance",
         content: `
-            <h3>Root Password Reset - Sequence Task</h3>
-            <p><strong>EXAM SCENARIO:</strong> You cannot actually reboot in the browser, but you need to know the procedure!</p>
-
-            <h3>Correct Sequence</h3>
-            <ol>
-                <li>Reboot the system and interrupt GRUB menu (press 'e')</li>
-                <li>Find the line starting with 'linux' and append: <code>rd.break</code></li>
-                <li>Press Ctrl+X to boot into emergency mode</li>
-                <li>Remount /sysroot as read-write: <code>mount -o remount,rw /sysroot</code></li>
-                <li>Change root into /sysroot: <code>chroot /sysroot</code></li>
-                <li>Reset password: <code>passwd root</code></li>
-                <li>Create SELinux relabel file: <code>touch /.autorelabel</code></li>
-                <li>Exit chroot: <code>exit</code></li>
-                <li>Exit emergency mode: <code>exit</code></li>
-                <li>System reboots and relabels (this takes time!)</li>
-            </ol>
-
-            <p><strong>Why /.autorelabel?</strong> Because you changed /etc/shadow outside of SELinux's awareness!</p>
-
             <h3>GRUB Configuration</h3>
             <ul>
                 <li><code>grub2-mkconfig -o /boot/grub2/grub.cfg</code> - Regenerate GRUB config</li>
                 <li><code>grubby --default-kernel</code> - Show default kernel</li>
+                <li><code>grubby --set-default-index=N</code> - Set default kernel</li>
             </ul>
+
+            <h3>Systemd Targets</h3>
+            <ul>
+                <li><code>systemctl get-default</code> - Show default target</li>
+                <li><code>systemctl set-default multi-user.target</code> - Set text mode boot</li>
+                <li><code>systemctl set-default graphical.target</code> - Set GUI mode boot</li>
+                <li><code>systemctl isolate rescue.target</code> - Switch to rescue mode</li>
+            </ul>
+
+            <h3>Kernel Management</h3>
+            <ul>
+                <li><code>uname -r</code> - Show running kernel version</li>
+                <li><code>dnf install kernel</code> - Install new kernel (keeps old)</li>
+                <li><code>dracut -f</code> - Regenerate initramfs</li>
+            </ul>
+
+            <p><strong>Note:</strong> For root password reset procedures, see Section 19.</p>
         `
     },
     16: {
@@ -975,12 +974,59 @@ loginctl enable-linger aaron</code></pre>
             <p>Add your notes for Section 17: Time Services here.</p>
             <p><em>Covers: timedatectl, chronyd, time zones, NTP synchronization</em></p>
         `
+    },
+    18: {
+        title: "Flatpak",
+        content: `
+            <p>Add your notes for Section 18: Flatpak here.</p>
+            <p><em>Covers: Flatpak installation, remotes, application management, permissions</em></p>
+        `
+    },
+    19: {
+        title: "Root Password Reset",
+        content: `
+            <h3>Root Password Reset - Critical RHCSA Skill</h3>
+            <p><strong>EXAM SCENARIO:</strong> You cannot actually reboot in the browser, but you need to know the procedure!</p>
+
+            <h3>Method 1: rd.break (Recommended)</h3>
+            <ol>
+                <li>Reboot the system and interrupt GRUB menu (press 'e')</li>
+                <li>Find the line starting with 'linux' and append: <code>rd.break</code></li>
+                <li>Press Ctrl+X to boot into emergency mode</li>
+                <li>Remount /sysroot as read-write: <code>mount -o remount,rw /sysroot</code></li>
+                <li>Change root into /sysroot: <code>chroot /sysroot</code></li>
+                <li>Reset password: <code>passwd root</code></li>
+                <li>Create SELinux relabel file: <code>touch /.autorelabel</code></li>
+                <li>Exit chroot: <code>exit</code></li>
+                <li>Exit emergency mode: <code>exit</code></li>
+                <li>System reboots and relabels (this takes time!)</li>
+            </ol>
+
+            <h3>Method 2: init=/bin/bash (Alternative)</h3>
+            <ol>
+                <li>At GRUB, press 'e' to edit boot parameters</li>
+                <li>Find the line starting with 'linux' and append: <code>init=/bin/bash</code></li>
+                <li>Press Ctrl+X to boot</li>
+                <li>Remount root as read-write: <code>mount -o remount,rw /</code></li>
+                <li>Change password: <code>passwd root</code></li>
+                <li>Create relabel file: <code>touch /.autorelabel</code></li>
+                <li>Reboot: <code>exec /sbin/init</code></li>
+            </ol>
+
+            <h3>Critical Points</h3>
+            <ul>
+                <li><strong>Why /.autorelabel?</strong> You changed /etc/shadow outside of SELinux's control!</li>
+                <li><strong>Why read-write?</strong> Default emergency mode mounts filesystems read-only</li>
+                <li><strong>Why chroot?</strong> rd.break drops you in initramfs, not the real root filesystem</li>
+                <li><strong>Exam tip:</strong> Practice the sequence until it's muscle memory!</li>
+            </ul>
+        `
     }
 };
 
 /**
  * Get notes for a specific section
- * @param {number} sectionId - The section ID (1-17)
+ * @param {number} sectionId - The section ID (1-19)
  * @returns {object} Object containing title and content for the section's notes
  */
 function getSectionNotes(sectionId) {
